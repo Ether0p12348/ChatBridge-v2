@@ -1,0 +1,79 @@
+plugins {
+    id 'java'
+    id 'com.github.johnrengelman.shadow' version '8.1.1'
+}
+
+group = 'com.ethanrobins.chatbridge_v2'
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    testImplementation platform('org.junit:junit-bom:5.10.3')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    implementation 'ch.qos.logback:logback-classic:1.5.6'
+    implementation 'net.dv8tion:JDA:5.0.1'
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.17.0'
+    implementation 'org.ini4j:ini4j:0.5.4'
+}
+
+test {
+    useJUnitPlatform()
+}
+
+def getVersionFromFile() {
+    def versionFile = file('v.txt')
+    if (!versionFile.exists()) {
+        versionFile.text = '0.0a' // Default starting version
+    }
+    return versionFile.text.trim()
+}
+
+def incrementVersion() {
+    def versionFile = file('v.txt')
+    def currentVersion = getVersionFromFile()
+    def matcher = currentVersion =~ /^(\d+)\.(\d+)([a-z]?)$/
+    if (matcher.matches()) {
+        def major = matcher[0][1] as int // Major version
+        def minor = matcher[0][2] as int + 1 // Increment minor version
+        def suffix = matcher[0][3] ?: '' // Preserve suffix if exists
+        def newVersion = "${major}.${minor}${suffix}"
+        versionFile.text = newVersion
+        return newVersion
+    }
+    return currentVersion // Fallback
+}
+
+tasks.named('shadowJar') {
+    doFirst {
+        def newVersion = incrementVersion()
+        project.version = newVersion
+
+        archiveBaseName.set('ChatBridge')
+        archiveVersion.set(newVersion)
+        archiveClassifier.set("")
+    }
+
+    manifest {
+        attributes 'Main-Class': "${project.group}.ChatBridge"
+        attributes 'Implementation-Title': 'ChatBridge'
+        attributes 'Implementation-Version': project.version
+        attributes 'Implementation-Vendor': 'Ethan Robins'
+        attributes 'Implementation-Vendor-Id': 'com.ethanrobins'
+        attributes 'Created-By': "Gradle ${gradle.gradleVersion}"
+        attributes 'Build-Jdk': System.getProperty('java.version')
+        attributes 'Built-By': "Ethan Robins [ethan@ethanrobins.com]"
+        attributes 'Automatic-Module-Name': project.group
+        attributes 'Build-Time': new Date()
+    }
+}
+
+tasks.named('jar') {
+    enabled = false
+}
