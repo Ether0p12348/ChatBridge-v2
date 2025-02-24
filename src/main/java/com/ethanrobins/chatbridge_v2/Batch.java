@@ -1,5 +1,6 @@
 package com.ethanrobins.chatbridge_v2;
 
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
@@ -17,6 +18,11 @@ public class Batch {
     public Batch (@Nullable String id, Payload... payload) {
         this.id = id != null ? id : this.id;
         payloads.addAll(Arrays.asList(payload));
+    }
+
+    public Batch (@Nullable String id, @NotNull List<Payload> payloads) {
+        this.id = id != null ? id : this.id;
+        this.payloads.addAll(payloads);
     }
 
     public Batch(){}
@@ -87,8 +93,8 @@ public class Batch {
         CompletableFuture.allOf(futures.values().toArray(new CompletableFuture[0])).join();
         scheduler.shutdown();
 
-        System.out.print("\r\u001B[34mBatch Progress: \u001B[35m- \u001B[33m100.0%\u001B[0m");
-        System.out.println("\n  \u001B[33m" + this.id + " \u001B[35m\u2190\u001B[0m " + sj);
+        System.out.print("\r\u001B[34mBatch Progress \u001B[35m- \u001B[33m100.0%\u001B[0m");
+        System.out.println("\n  \u001B[33m" + this.id + " \u001B[35m-\u001B[0m " + sj);
         System.out.println("\u001B[34mBatch Completed: \u001B[33m" + this.id + "\u001B[0m");
 
         return this;

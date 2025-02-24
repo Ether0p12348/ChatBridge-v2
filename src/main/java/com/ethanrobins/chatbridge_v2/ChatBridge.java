@@ -156,8 +156,8 @@ public class ChatBridge {
             i++;
         }
 
-        System.out.println("\u001B[33m" + name + "\u001B[0m SlashCommand nameLocalizations \u001B[35m\u2190\u001B[0m " + namesj);
-        System.out.println("\u001B[33m" + name + "\u001B[0m SlashCommand descriptionLocalizations \u001B[35m\u2190\u001B[0m " + descsj);
+        System.out.println("\u001B[33m" + name + "\u001B[0m SlashCommand nameLocalizations \u001B[35m-\u001B[0m " + namesj);
+        System.out.println("\u001B[33m" + name + "\u001B[0m SlashCommand descriptionLocalizations \u001B[35m-\u001B[0m " + descsj);
 
         return cmd;
     }
@@ -208,7 +208,7 @@ public class ChatBridge {
             }
         }
 
-        System.out.println("\u001B[33m" + name + "\u001B[0m ContextCommand nameLocalizations \u001B[35m\u2190\u001B[0m " + sj);
+        System.out.println("\u001B[33m" + name + "\u001B[0m ContextCommand nameLocalizations \u001B[35m-\u001B[0m " + sj);
 
         return cmd;
     }

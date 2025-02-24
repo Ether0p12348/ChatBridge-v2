@@ -190,6 +190,7 @@ public class Payload {
                 this.result = result;
                 return result;
             } catch (URISyntaxException | IOException | InterruptedException | HttpErrorCode e) {
+
                 e.printStackTrace();
                 return null;
             }
