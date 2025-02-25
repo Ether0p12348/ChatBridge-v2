@@ -1,19 +1,17 @@
 package com.ethanrobins.chatbridge_v2.events;
 
 import com.ethanrobins.chatbridge_v2.*;
-import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.EmbedType;
 import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.events.interaction.command.MessageContextInteractionEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import net.dv8tion.jda.api.interactions.DiscordLocale;
+import net.dv8tion.jda.api.utils.messages.MessageCreateBuilder;
+import net.dv8tion.jda.api.utils.messages.MessageCreateData;
 import org.jetbrains.annotations.NotNull;
 
-import java.time.temporal.TemporalAccessor;
 import java.util.*;
-import java.util.concurrent.ExecutionException;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
+import java.util.concurrent.*;
 
 public class MessageInteraction extends ListenerAdapter {
     @Override
@@ -91,177 +89,177 @@ public class MessageInteraction extends ListenerAdapter {
         if (embeds.isEmpty()) {
             Payload payload = new Payload(null, TranslateType.DECORATED.getSystemPrompt(), "(" + targetLanguage + ")" + event.getTarget().getContentRaw(), 5000);
             try {
-                payload.queue();
-                return event.getTarget().getJumpUrl() + ": " + payload.getResult();
-            } catch (InterruptedException | ExecutionException e) {
+                ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+                CompletableFuture<String> messageFuture = new CompletableFuture<>();
+
+                scheduler.schedule(() -> {
+                    payload.translateAsync().whenComplete((result, ex) -> {
+                        if (ex != null) {
+                            messageFuture.completeExceptionally(ex);
+                        } else {
+                            messageFuture.complete(result);
+                        }
+                    });
+                }, 0, TimeUnit.MILLISECONDS);
+                String message = event.getTarget().getJumpUrl() + ": " + payload.getResult();
+                scheduler.shutdown();
+
+                return message;
+            } catch (Exception e) {
                 e.printStackTrace();
                 return buildEndUserError(e);
             }
         } else {
-            List<Payload> payloads = new ArrayList<>();
-            String batchIdNum = ChatBridge.genId(8);
-            String batchId = "batch_" + batchIdNum;
+            String mainMessage = null;
+            List<MessageEmbed> translatedEmbeds = new ArrayList<>();
 
             boolean hasMainContent = event.getTarget().getContentRaw() != null && !event.getTarget().getContentRaw().isEmpty();
             if (hasMainContent) {
-                payloads.add(new Payload(batchIdNum + "_message", null, TranslateType.PLAIN.getSystemPrompt(), "(" + targetLanguage + ")" + event.getTarget().getContentRaw(), 5000));
+                ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+                CompletableFuture<String> mainMessageFuture = new CompletableFuture<>();
+                Payload mainMessagePayload = new Payload(null, TranslateType.PLAIN.getSystemPrompt(), "(" + targetLanguage + ")" + event.getTarget().getContentRaw(), 5000);
+
+                try {
+                    scheduler.schedule(() -> {
+                        mainMessagePayload.translateAsync().whenComplete((result, ex) -> {
+                            if (ex != null) {
+                                mainMessageFuture.completeExceptionally(ex);
+                            } else {
+                                mainMessageFuture.complete(result);
+                            }
+                        });
+                    }, 0, TimeUnit.MILLISECONDS);
+
+                    mainMessage = mainMessagePayload.getResult();
+                    scheduler.shutdown();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    return buildEndUserError(e);
+                }
             }
 
-            /**
-            * + = translated   - = not updatable
-            * type           - EmbedType (enum)
-            * siteProvider   - Provider
-            * - name         - String
-            * - url          - String
-            * url              String
-            * title          + String
-            * description    + String
-            * author           AuthorInfo
-            * - name         + String
-            * - url            String
-            * - iconUrl        String
-            * - proxyIconUrl - String
-            * footer           Footer
-            * - text         + String
-            * - icon           String
-            * - proxyIconUrl - String
-            * image            ImageInfo
-            * - url            String
-            * - proxyUrl     - String
-            * - width        - int
-            * - height       - int
-            * thumbnail        Thumbnail
-            * - url            String
-            * - proxyUrl     - String
-            * - width        - int
-            * - height       - int
-            * videoInfo      - VideoInfo
-            * - url          - String
-            * - proxyUrl     - String
-            * - width        - int
-            * - height       - int
-            * color            int
-            * fields           List<Field>
-            * - name         + String
-            * - value        + String
-            * - inline         boolean
-            * timestamp        OffsetDateTime (java.time)
-            * */
-            Map<Integer, MessageEmbed> inOrderEmbeds = new HashMap<>();
-            int i = 0;
-            for (MessageEmbed embed : embeds) {
-                inOrderEmbeds.put(i, embed);
-
-                if (embed.getTitle() != null && !embed.getTitle().isEmpty()) {
-                    payloads.add(new Payload(batchIdNum + "_embed_" + i + "_title", null, TranslateType.PLAIN.getSystemPrompt(), "(" + targetLanguage + ")" + embed.getTitle(), 5000));
-                }
-                if (embed.getDescription() != null && !embed.getDescription().isEmpty()) {
-                    payloads.add(new Payload(batchIdNum + "_embed_" + i + "_description", null, TranslateType.PLAIN.getSystemPrompt(), "(" + targetLanguage + ")" + embed.getDescription(), 5000));
-                }
-                if (embed.getAuthor() != null) {
-                    if (embed.getAuthor().getName() != null && !embed.getAuthor().getName().isEmpty()) {
-                        payloads.add(new Payload(batchIdNum + "_embed_" + i + "_author_name", null, TranslateType.PLAIN.getSystemPrompt(), "(" + targetLanguage + ")" + embed.getAuthor().getName(), 5000));
-                    }
-                }
-                if (embed.getFooter() != null) {
-                    if (embed.getFooter().getText() != null && !embed.getFooter().getText().isEmpty()) {
-                        payloads.add(new Payload(batchIdNum + "_embed_" + i + "_footer_text", null, TranslateType.PLAIN.getSystemPrompt(), "(" + targetLanguage + ")" + embed.getFooter().getText(), 5000));
-                    }
-                }
-                if (!embed.getFields().isEmpty()) {
-                    int fi = 0;
-                    for (MessageEmbed.Field field : embed.getFields()) {
-                        if (field.getName() != null && !field.getName().isEmpty()) {
-                            payloads.add(new Payload(batchIdNum + "_embed_" + i + "_field_" + fi + "_name", null, TranslateType.PLAIN.getSystemPrompt(), "(" + targetLanguage + ")" + field.getName(), 5000));
-                        }
-                        if (field.getValue() != null && !field.getValue().isEmpty()) {
-                            payloads.add(new Payload(batchIdNum + "_embed_" + i + "_field_" + fi + "_value", null, TranslateType.PLAIN.getSystemPrompt(), "(" + targetLanguage + ")" + field.getValue(), 5000));
-                        }
-
-                        fi++;
-                    }
-                }
-
-                i++;
+            for (MessageEmbed e : embeds) {
+                TranslateEmbedBuilder builder = new TranslateEmbedBuilder(e).translate(targetLanguage);
+                translatedEmbeds.add(builder.build());
             }
 
-            Batch batch = new Batch(batchId, payloads);
-            try {
-                batch.queue(0);
-
-                List<Payload> outPayloads = batch.getPayloads();
-                Map<String, String> results = new HashMap<>();
-
-                for (Payload p : outPayloads) {
-                    results.put(p.getId(), p.getResult());
-                }
-
-                String message = results.get(batchIdNum + "_message") != null ? results.get(batchIdNum + "_message") : null;
-                results.remove(batchIdNum + "_message");
-
-                List<EmbedBuilder> embedBuilders = new ArrayList<>();
-                int maxNum = results.keySet().stream().map(key -> key.split("_")).filter(parts -> parts.length > 2).mapToInt(parts -> Integer.parseInt(parts[2])).max().orElse(0);
-
-                for (int n = 0; n < maxNum; n++) {
-                    final int nn = n;
-                    Map<String, String> embed = results.entrySet().stream().filter(e -> e.getKey().startsWith(batchIdNum + "_embed_" + nn)).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-
-                    EmbedBuilder eb = new EmbedBuilder();
-
-                    eb.setColor(inOrderEmbeds.get(nn).getColor());
-
-                    if (embed.get(batchIdNum + "_embed_" + nn + "_title") != null) {
-                        eb.setTitle(embed.get(batchIdNum + "_embed_" + nn + "_title"));
-                    }
-
-                    if (inOrderEmbeds.get(nn).getUrl() != null) {
-                        eb.setUrl(inOrderEmbeds.get(nn).getUrl());
-                    }
-
-                    if (embed.get(batchIdNum + "_embed_" + nn + "_description") != null) {
-                        eb.setDescription(embed.get(batchIdNum + "_embed_" + nn + "_description"));
-                    }
-
-                    String authorUrl = null;
-                    String authorIcon = null;
-                    if (inOrderEmbeds.get(nn).getAuthor() != null) {
-                        authorUrl = Objects.requireNonNull(inOrderEmbeds.get(nn).getAuthor()).getUrl();
-                        authorIcon = Objects.requireNonNull(inOrderEmbeds.get(nn).getAuthor()).getIconUrl();
-                    }
-                    if (embed.get(batchIdNum + "_embed_" + nn + "_author_name") != null || authorUrl != null || authorIcon != null) {
-                        eb.setAuthor(embed.get(batchIdNum + "_embed_" + nn + "_author_name"), authorUrl, authorIcon);
-                    }
-
-                    String footerIcon = null;
-                    if (inOrderEmbeds.get(nn).getFooter() != null) {
-                        footerIcon = Objects.requireNonNull(inOrderEmbeds.get(nn).getFooter()).getIconUrl();
-                    }
-                    if (embed.get(batchIdNum + "_embed_" + nn + "_footer_text") != null || footerIcon != null) {
-                        eb.setFooter(embed.get(batchIdNum + "_embed_" + nn + "_footer_text"), footerIcon);
-                    }
-
-                    if (inOrderEmbeds.get(nn).getImage() != null) {
-                        eb.setImage(Objects.requireNonNull(inOrderEmbeds.get(nn).getImage()).getUrl());
-                    }
-
-                    if (inOrderEmbeds.get(nn).getThumbnail() != null) {
-                        eb.setThumbnail(Objects.requireNonNull(inOrderEmbeds.get(nn).getThumbnail()).getUrl());
-                    }
-
-                    TemporalAccessor timestamp = null;
-                    if (inOrderEmbeds.get(nn).getTimestamp() != null) {
-                        timestamp = Objects.requireNonNull(inOrderEmbeds.get(nn).getTimestamp());
-                    }
-                    if (timestamp != null) {
-                        eb.setTimestamp(timestamp);
-                    }
-
-                    for (MessageEmbed.Field field : ) {
-
-                    }
-                    // may have to make a class for all of this
-                    embedBuilders.add(eb);
-                }
+            return new MessageCreateBuilder().setContent(mainMessage).setEmbeds(translatedEmbeds).build();
+//
+//            Map<Integer, MessageEmbed> inOrderEmbeds = new HashMap<>();
+//            int i = 0;
+//            for (MessageEmbed embed : embeds) {
+//                inOrderEmbeds.put(i, embed);
+//
+//                if (embed.getTitle() != null && !embed.getTitle().isEmpty()) {
+//                    payloads.add(new Payload(batchIdNum + "_embed_" + i + "_title", null, TranslateType.PLAIN.getSystemPrompt(), "(" + targetLanguage + ")" + embed.getTitle(), 5000));
+//                }
+//                if (embed.getDescription() != null && !embed.getDescription().isEmpty()) {
+//                    payloads.add(new Payload(batchIdNum + "_embed_" + i + "_description", null, TranslateType.PLAIN.getSystemPrompt(), "(" + targetLanguage + ")" + embed.getDescription(), 5000));
+//                }
+//                if (embed.getAuthor() != null) {
+//                    if (embed.getAuthor().getName() != null && !embed.getAuthor().getName().isEmpty()) {
+//                        payloads.add(new Payload(batchIdNum + "_embed_" + i + "_author_name", null, TranslateType.PLAIN.getSystemPrompt(), "(" + targetLanguage + ")" + embed.getAuthor().getName(), 5000));
+//                    }
+//                }
+//                if (embed.getFooter() != null) {
+//                    if (embed.getFooter().getText() != null && !embed.getFooter().getText().isEmpty()) {
+//                        payloads.add(new Payload(batchIdNum + "_embed_" + i + "_footer_text", null, TranslateType.PLAIN.getSystemPrompt(), "(" + targetLanguage + ")" + embed.getFooter().getText(), 5000));
+//                    }
+//                }
+//                if (!embed.getFields().isEmpty()) {
+//                    int fi = 0;
+//                    for (MessageEmbed.Field field : embed.getFields()) {
+//                        if (field.getName() != null && !field.getName().isEmpty()) {
+//                            payloads.add(new Payload(batchIdNum + "_embed_" + i + "_field_" + fi + "_name", null, TranslateType.PLAIN.getSystemPrompt(), "(" + targetLanguage + ")" + field.getName(), 5000));
+//                        }
+//                        if (field.getValue() != null && !field.getValue().isEmpty()) {
+//                            payloads.add(new Payload(batchIdNum + "_embed_" + i + "_field_" + fi + "_value", null, TranslateType.PLAIN.getSystemPrompt(), "(" + targetLanguage + ")" + field.getValue(), 5000));
+//                        }
+//
+//                        fi++;
+//                    }
+//                }
+//
+//                i++;
+//            }
+//
+//            Batch batch = new Batch(batchId, payloads);
+//            try {
+//                batch.queue(0);
+//
+//                List<Payload> outPayloads = batch.getPayloads();
+//                Map<String, String> results = new HashMap<>();
+//
+//                for (Payload p : outPayloads) {
+//                    results.put(p.getId(), p.getResult());
+//                }
+//
+//                String message = results.get(batchIdNum + "_message") != null ? results.get(batchIdNum + "_message") : null;
+//                results.remove(batchIdNum + "_message");
+//
+//                List<EmbedBuilder> embedBuilders = new ArrayList<>();
+//                int maxNum = results.keySet().stream().map(key -> key.split("_")).filter(parts -> parts.length > 2).mapToInt(parts -> Integer.parseInt(parts[2])).max().orElse(0);
+//
+//                for (int n = 0; n < maxNum; n++) {
+//                    final int nn = n;
+//                    Map<String, String> embed = results.entrySet().stream().filter(e -> e.getKey().startsWith(batchIdNum + "_embed_" + nn)).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+//
+//                    EmbedBuilder eb = new EmbedBuilder();
+//
+//                    eb.setColor(inOrderEmbeds.get(nn).getColor());
+//
+//                    if (embed.get(batchIdNum + "_embed_" + nn + "_title") != null) {
+//                        eb.setTitle(embed.get(batchIdNum + "_embed_" + nn + "_title"));
+//                    }
+//
+//                    if (inOrderEmbeds.get(nn).getUrl() != null) {
+//                        eb.setUrl(inOrderEmbeds.get(nn).getUrl());
+//                    }
+//
+//                    if (embed.get(batchIdNum + "_embed_" + nn + "_description") != null) {
+//                        eb.setDescription(embed.get(batchIdNum + "_embed_" + nn + "_description"));
+//                    }
+//
+//                    String authorUrl = null;
+//                    String authorIcon = null;
+//                    if (inOrderEmbeds.get(nn).getAuthor() != null) {
+//                        authorUrl = Objects.requireNonNull(inOrderEmbeds.get(nn).getAuthor()).getUrl();
+//                        authorIcon = Objects.requireNonNull(inOrderEmbeds.get(nn).getAuthor()).getIconUrl();
+//                    }
+//                    if (embed.get(batchIdNum + "_embed_" + nn + "_author_name") != null || authorUrl != null || authorIcon != null) {
+//                        eb.setAuthor(embed.get(batchIdNum + "_embed_" + nn + "_author_name"), authorUrl, authorIcon);
+//                    }
+//
+//                    String footerIcon = null;
+//                    if (inOrderEmbeds.get(nn).getFooter() != null) {
+//                        footerIcon = Objects.requireNonNull(inOrderEmbeds.get(nn).getFooter()).getIconUrl();
+//                    }
+//                    if (embed.get(batchIdNum + "_embed_" + nn + "_footer_text") != null || footerIcon != null) {
+//                        eb.setFooter(embed.get(batchIdNum + "_embed_" + nn + "_footer_text"), footerIcon);
+//                    }
+//
+//                    if (inOrderEmbeds.get(nn).getImage() != null) {
+//                        eb.setImage(Objects.requireNonNull(inOrderEmbeds.get(nn).getImage()).getUrl());
+//                    }
+//
+//                    if (inOrderEmbeds.get(nn).getThumbnail() != null) {
+//                        eb.setThumbnail(Objects.requireNonNull(inOrderEmbeds.get(nn).getThumbnail()).getUrl());
+//                    }
+//
+//                    TemporalAccessor timestamp = null;
+//                    if (inOrderEmbeds.get(nn).getTimestamp() != null) {
+//                        timestamp = Objects.requireNonNull(inOrderEmbeds.get(nn).getTimestamp());
+//                    }
+//                    if (timestamp != null) {
+//                        eb.setTimestamp(timestamp);
+//                    }
+//
+//                    for (MessageEmbed.Field field : ) {
+//
+//                    }
+//                    // may have to make a class for all of this
+//                    embedBuilders.add(eb);
+//                }
 
 //                int in = 0;
 //                String mainContent = batch.get(batchIdNum + "_message") != null ? batch.get(batchIdNum + "_message").getResult() : null;
@@ -278,10 +276,10 @@ public class MessageInteraction extends ListenerAdapter {
 //                        fields.add(p.getResult());
 //                    }
 //                }
-            } catch (Exception ex) {
-                ex.printStackTrace();
-                return buildEndUserError(ex);
-            }
+//            } catch (Exception ex) {
+//                ex.printStackTrace();
+//                return buildEndUserError(ex);
+//            }
         }
     }
 
