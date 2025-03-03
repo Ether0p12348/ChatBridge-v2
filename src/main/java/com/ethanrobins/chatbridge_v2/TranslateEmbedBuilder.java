@@ -229,6 +229,12 @@ public class TranslateEmbedBuilder {
     private MessageEmbed.Footer footer;
     private MessageEmbed.ImageInfo image;
 
+    private boolean translateAuthor = true;
+    private boolean translateTitle= true;
+    private boolean translateDescription = true;
+    private boolean translateFooter = true;
+    private boolean translateFields = true;
+
     /**
      * Constructs a new TranslateEmbedBuilder instance, which can be used to create {@link net.dv8tion.jda.api.entities.MessageEmbed MessageEmbeds}.
      * These can then be sent to a channel using {@link net.dv8tion.jda.api.entities.channel.middleman.MessageChannel#sendMessageEmbeds(MessageEmbed, MessageEmbed...)}.
@@ -536,6 +542,13 @@ public class TranslateEmbedBuilder {
     @NotNull
     public TranslateEmbedBuilder setTitle(@Nullable String title, @Nullable String url)
     {
+        return setTitle(title, url, true);
+    }
+
+    @NotNull
+    public TranslateEmbedBuilder setTitle(@Nullable String title, @Nullable String url, boolean translate)
+    {
+        this.translateTitle = translate;
         if (title == null)
         {
             this.title = null;
@@ -613,6 +626,13 @@ public class TranslateEmbedBuilder {
     @NotNull
     public final TranslateEmbedBuilder setDescription(@Nullable CharSequence description)
     {
+        return setDescription(description, true);
+    }
+
+    @NotNull
+    public final TranslateEmbedBuilder setDescription(@Nullable CharSequence description, boolean translate)
+    {
+        this.translateDescription = translate;
         this.description.setLength(0);
         if (description != null && description.length() >= 1)
             appendDescription(description);
@@ -643,6 +663,12 @@ public class TranslateEmbedBuilder {
         Checks.check(this.description.length() + description.length() <= MessageEmbed.DESCRIPTION_MAX_LENGTH,
                 "Description cannot be longer than %d characters.", MessageEmbed.DESCRIPTION_MAX_LENGTH);
         this.description.append(description);
+        return this;
+    }
+
+    @NotNull
+    public TranslateEmbedBuilder doTranslateDescription(boolean translateDescription) {
+        this.translateDescription = translateDescription;
         return this;
     }
 
@@ -897,6 +923,13 @@ public class TranslateEmbedBuilder {
     @NotNull
     public TranslateEmbedBuilder setAuthor(@Nullable String name, @Nullable String url, @Nullable String iconUrl)
     {
+        return setAuthor(name, url, iconUrl, true);
+    }
+
+    @NotNull
+    public TranslateEmbedBuilder setAuthor(@Nullable String name, @Nullable String url, @Nullable String iconUrl, boolean translate)
+    {
+        this.translateAuthor = translate;
         // We only check if the name is null because its presence is what determines if the author will appear in the embed.
         if (name == null)
         {
@@ -971,6 +1004,12 @@ public class TranslateEmbedBuilder {
     @NotNull
     public TranslateEmbedBuilder setFooter(@Nullable String text, @Nullable String iconUrl)
     {
+        return setFooter(text, iconUrl, true);
+    }
+
+    @NotNull
+    public TranslateEmbedBuilder setFooter(@Nullable String text, @Nullable String iconUrl, boolean translate) {
+        this.translateFooter = translate;
         //We only check if the text is null because its presence is what determines if the
         // footer will appear in the embed.
         if (text == null)
@@ -1070,6 +1109,12 @@ public class TranslateEmbedBuilder {
         return this;
     }
 
+    @NotNull
+    public TranslateEmbedBuilder doTranslateFields(boolean translateFields) {
+        this.translateFields = translateFields;
+        return this;
+    }
+
     /**
      * <b>Modifiable</b> list of {@link net.dv8tion.jda.api.entities.MessageEmbed MessageEmbed} Fields that the builder will
      * use for {@link #build()}.
@@ -1094,64 +1139,86 @@ public class TranslateEmbedBuilder {
     }
 
     public TranslateEmbedBuilder translate(@NotNull String targetLanguage){
-        if (this.title != null && !this.title.isEmpty()) {
-            this.batch.add(new Payload(this.batchIdNum + "_title", null, TranslateType.PLAIN.getSystemPrompt(), "(" + targetLanguage + ")" + this.title, 5000));
+        if (this.translateTitle) {
+            if (this.title != null && !this.title.isEmpty()) {
+                this.batch.add(new Payload(this.batchIdNum + "_title", null, TranslateType.PLAIN.getSystemPrompt(), "(" + targetLanguage + ")" + this.title, 5000));
+            }
         }
-        if (!this.description.isEmpty()) {
-            this.batch.add(new Payload(this.batchIdNum + "_description", null, TranslateType.PLAIN.getSystemPrompt(), "(" + targetLanguage + ")" + this.description, 5000));
+        if (this.translateDescription) {
+            if (!this.description.isEmpty()) {
+                this.batch.add(new Payload(this.batchIdNum + "_description", null, TranslateType.PLAIN.getSystemPrompt(), "(" + targetLanguage + ")" + this.description, 5000));
+            }
         }
-        if (this.footer != null && this.footer.getText() != null && !this.footer.getText().isEmpty()) {
-            this.batch.add(new Payload(this.batchIdNum + "_footer_text", null, TranslateType.PLAIN.getSystemPrompt(), "(" + targetLanguage + ")" + this.footer.getText(), 5000));
+        if (this.translateFooter) {
+            if (this.footer != null && this.footer.getText() != null && !this.footer.getText().isEmpty()) {
+                this.batch.add(new Payload(this.batchIdNum + "_footer_text", null, TranslateType.PLAIN.getSystemPrompt(), "(" + targetLanguage + ")" + this.footer.getText(), 5000));
+            }
         }
-        if (this.author != null && this.author.getName() != null && !this.author.getName().isEmpty()) {
-            this.batch.add(new Payload(this.batchIdNum + "_author_name", null, TranslateType.PLAIN.getSystemPrompt(), "(" + targetLanguage + ")" + this.author.getName(), 5000));
+        if (this.translateAuthor) {
+            if (this.author != null && this.author.getName() != null && !this.author.getName().isEmpty()) {
+                this.batch.add(new Payload(this.batchIdNum + "_author_name", null, TranslateType.PLAIN.getSystemPrompt(), "(" + targetLanguage + ")" + this.author.getName(), 5000));
+            }
         }
-        for (int i = 0; i < this.fields.size(); i++) {
-            MessageEmbed.Field field = this.fields.get(i);
-            this.batch.add(new Payload(this.batchIdNum + "_field_" + i + "_name", null, TranslateType.PLAIN.getSystemPrompt(), "(" + targetLanguage + ")" + field.getName(), 5000));
-            this.batch.add(new Payload(this.batchIdNum + "_field_" + i + "_value", null, TranslateType.PLAIN.getSystemPrompt(), "(" + targetLanguage + ")" + field.getValue(), 5000));
-        }
-
-        this.batch.queue(0);
-        List<Payload> outPayloads = batch.getPayloads();
-
-        Map<String, String> results = new HashMap<>();
-        for (Payload p : outPayloads) {
-            results.put(p.getId(), p.getResult());
-        }
-
-        String title = (this.title != null && !this.title.isEmpty()) ? results.get(this.batchIdNum + "_title") : null;
-        this.setTitle(title);
-
-        String description = !this.description.isEmpty() ? results.get(this.batchIdNum + "_description"): "";
-        this.setDescription(new StringBuilder(description));
-
-        if (this.footer != null && this.footer.getText() != null && !this.footer.getText().isEmpty()) {
-            String footerText = !this.footer.getText().isEmpty() ? results.get(this.batchIdNum + "_footer_text") : null;
-            String footerIconUrl = (this.footer.getIconUrl() != null && !this.footer.getIconUrl().isEmpty()) ? this.footer.getIconUrl() : null;
-            this.setFooter(footerText, footerIconUrl);
+        if (this.translateFields) {
+            for (int i = 0; i < this.fields.size(); i++) {
+                MessageEmbed.Field field = this.fields.get(i);
+                this.batch.add(new Payload(this.batchIdNum + "_field_" + i + "_name", null, TranslateType.PLAIN.getSystemPrompt(), "(" + targetLanguage + ")" + field.getName(), 5000));
+                this.batch.add(new Payload(this.batchIdNum + "_field_" + i + "_value", null, TranslateType.PLAIN.getSystemPrompt(), "(" + targetLanguage + ")" + field.getValue(), 5000));
+            }
         }
 
-        if (this.author != null && this.author.getName() != null && !this.author.getName().isEmpty()) {
-            String authorName = (this.author.getName() != null && !this.author.getName().isEmpty()) ? results.get(this.batchIdNum + "_author_name") : null;
-            String authorUrl = (this.author.getUrl() != null && !this.author.getUrl().isEmpty()) ? this.author.getUrl() : null;
-            String authorIconUrl = (this.author.getIconUrl() != null && !this.author.getIconUrl().isEmpty()) ? this.author.getIconUrl() : null;
-            this.setAuthor(authorName, authorUrl, authorIconUrl);
+        if (!this.batch.getPayloads().isEmpty()) {
+            this.batch.queue(0);
+            List<Payload> outPayloads = batch.getPayloads();
+
+            Map<String, String> results = new HashMap<>();
+            for (Payload p : outPayloads) {
+                results.put(p.getId(), p.getResult());
+            }
+
+            if (this.translateTitle) {
+                String title = (this.title != null && !this.title.isEmpty()) ? results.get(this.batchIdNum + "_title") : null;
+                this.setTitle(title);
+            }
+
+            if (this.translateDescription) {
+                String description = !this.description.isEmpty() ? results.get(this.batchIdNum + "_description") : "";
+                this.setDescription(new StringBuilder(description));
+            }
+
+            if (this.translateFooter) {
+                if (this.footer != null && this.footer.getText() != null && !this.footer.getText().isEmpty()) {
+                    String footerText = !this.footer.getText().isEmpty() ? results.get(this.batchIdNum + "_footer_text") : null;
+                    String footerIconUrl = (this.footer.getIconUrl() != null && !this.footer.getIconUrl().isEmpty()) ? this.footer.getIconUrl() : null;
+                    this.setFooter(footerText, footerIconUrl);
+                }
+            }
+
+            if (this.translateAuthor) {
+                if (this.author != null && this.author.getName() != null && !this.author.getName().isEmpty()) {
+                    String authorName = (this.author.getName() != null && !this.author.getName().isEmpty()) ? results.get(this.batchIdNum + "_author_name") : null;
+                    String authorUrl = (this.author.getUrl() != null && !this.author.getUrl().isEmpty()) ? this.author.getUrl() : null;
+                    String authorIconUrl = (this.author.getIconUrl() != null && !this.author.getIconUrl().isEmpty()) ? this.author.getIconUrl() : null;
+                    this.setAuthor(authorName, authorUrl, authorIconUrl);
+                }
+            }
+
+            if (this.translateFields) {
+                Map<String, String> fieldResults = results.entrySet().stream().filter(e -> e.getKey().startsWith(this.batchIdNum + "_field_")).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+                int maxNum = fieldResults.keySet().stream().map(key -> key.split("_")).filter(parts -> parts.length > 2).mapToInt(parts -> Integer.parseInt(parts[2])).max().orElse(0);
+
+                List<MessageEmbed.Field> fields = new ArrayList<>();
+
+                for (int i = 0; i < maxNum; i++) {
+                    String name = fieldResults.get(this.batchIdNum + "_field_" + i + "_name");
+                    String value = fieldResults.get(this.batchIdNum + "_field_" + i + "_value");
+                    fields.add(new MessageEmbed.Field(name, value, this.fields.get(i).isInline()));
+                }
+
+                this.clearFields();
+                this.fields.addAll(fields);
+            }
         }
-
-        Map<String, String> fieldResults = results.entrySet().stream().filter(e -> e.getKey().startsWith(this.batchIdNum + "_field_")).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-        int maxNum = fieldResults.keySet().stream().map(key -> key.split("_")).filter(parts -> parts.length > 2).mapToInt(parts -> Integer.parseInt(parts[2])).max().orElse(0);
-
-        List<MessageEmbed.Field> fields = new ArrayList<>();
-
-        for (int i = 0; i < maxNum; i++) {
-            String name = fieldResults.get(this.batchIdNum + "_field_" + i + "_name");
-            String value = fieldResults.get(this.batchIdNum + "_field_" + i + "_value");
-            fields.add(new MessageEmbed.Field(name, value, this.fields.get(i).isInline()));
-        }
-
-        this.clearFields();
-        this.fields.addAll(fields);
 
         return this;
     }

@@ -16,6 +16,7 @@ import org.jetbrains.annotations.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
+import java.sql.SQLException;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
@@ -42,6 +43,12 @@ public class ChatBridge {
         }
         loadSecret();
 
+        if (!dev) {
+            testDatabase();
+        } else {
+            System.out.println("Running in dev mode! Database usage is disabled!");
+        }
+
         if (token != null) {
             JDABuilder jdaBuilder = JDABuilder.createDefault(token);
 
@@ -58,6 +65,16 @@ public class ChatBridge {
             ).queue();
         } else {
             throw new RuntimeException("Token not found!");
+        }
+    }
+
+    private static void testDatabase() {
+        try {
+            MySQL mysql = new MySQL();
+            System.out.println("MySQL Connection test successful.");
+            mysql.close();
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
         }
     }
 
