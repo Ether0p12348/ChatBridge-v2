@@ -18,6 +18,7 @@ import java.time.OffsetDateTime;
 import java.time.temporal.TemporalAccessor;
 import java.util.*;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 /**
@@ -1093,10 +1094,18 @@ public class TranslateEmbedBuilder {
     }
 
     public TranslateEmbedBuilder translate(@NotNull String targetLanguage){
-        this.batch.add(new Payload(this.batchIdNum + "_title", null, TranslateType.PLAIN.getSystemPrompt(), "(" + targetLanguage + ")" + this.title, 5000));
-        this.batch.add(new Payload(this.batchIdNum + "_description", null, TranslateType.PLAIN.getSystemPrompt(), "(" + targetLanguage + ")" + this.description, 5000));
-        this.batch.add(new Payload(this.batchIdNum + "_footer_text", null, TranslateType.PLAIN.getSystemPrompt(), "(" + targetLanguage + ")" + this.footer.getText(), 5000));
-        this.batch.add(new Payload(this.batchIdNum + "_author_name", null, TranslateType.PLAIN.getSystemPrompt(), "(" + targetLanguage + ")" + this.author.getName(), 5000));
+        if (this.title != null && !this.title.isEmpty()) {
+            this.batch.add(new Payload(this.batchIdNum + "_title", null, TranslateType.PLAIN.getSystemPrompt(), "(" + targetLanguage + ")" + this.title, 5000));
+        }
+        if (!this.description.isEmpty()) {
+            this.batch.add(new Payload(this.batchIdNum + "_description", null, TranslateType.PLAIN.getSystemPrompt(), "(" + targetLanguage + ")" + this.description, 5000));
+        }
+        if (this.footer != null && this.footer.getText() != null && !this.footer.getText().isEmpty()) {
+            this.batch.add(new Payload(this.batchIdNum + "_footer_text", null, TranslateType.PLAIN.getSystemPrompt(), "(" + targetLanguage + ")" + this.footer.getText(), 5000));
+        }
+        if (this.author != null && this.author.getName() != null && !this.author.getName().isEmpty()) {
+            this.batch.add(new Payload(this.batchIdNum + "_author_name", null, TranslateType.PLAIN.getSystemPrompt(), "(" + targetLanguage + ")" + this.author.getName(), 5000));
+        }
         for (int i = 0; i < this.fields.size(); i++) {
             MessageEmbed.Field field = this.fields.get(i);
             this.batch.add(new Payload(this.batchIdNum + "_field_" + i + "_name", null, TranslateType.PLAIN.getSystemPrompt(), "(" + targetLanguage + ")" + field.getName(), 5000));
@@ -1111,17 +1120,31 @@ public class TranslateEmbedBuilder {
             results.put(p.getId(), p.getResult());
         }
 
-        this.setTitle(results.get(this.batchIdNum + "_title"));
-        this.setDescription(new StringBuilder(results.get(this.batchIdNum + "_description")));
-        this.setFooter(results.get(this.batchIdNum + "_footer_text"), this.footer.getIconUrl());
-        this.setAuthor(results.get(this.batchIdNum + "_author_name"), this.author.getUrl(), this.author.getIconUrl());
+        String title = (this.title != null && !this.title.isEmpty()) ? results.get(this.batchIdNum + "_title") : null;
+        this.setTitle(title);
+
+        String description = !this.description.isEmpty() ? results.get(this.batchIdNum + "_description"): "";
+        this.setDescription(new StringBuilder(description));
+
+        if (this.footer != null && this.footer.getText() != null && !this.footer.getText().isEmpty()) {
+            String footerText = !this.footer.getText().isEmpty() ? results.get(this.batchIdNum + "_footer_text") : null;
+            String footerIconUrl = (this.footer.getIconUrl() != null && !this.footer.getIconUrl().isEmpty()) ? this.footer.getIconUrl() : null;
+            this.setFooter(footerText, footerIconUrl);
+        }
+
+        if (this.author != null && this.author.getName() != null && !this.author.getName().isEmpty()) {
+            String authorName = (this.author.getName() != null && !this.author.getName().isEmpty()) ? results.get(this.batchIdNum + "_author_name") : null;
+            String authorUrl = (this.author.getUrl() != null && !this.author.getUrl().isEmpty()) ? this.author.getUrl() : null;
+            String authorIconUrl = (this.author.getIconUrl() != null && !this.author.getIconUrl().isEmpty()) ? this.author.getIconUrl() : null;
+            this.setAuthor(authorName, authorUrl, authorIconUrl);
+        }
 
         Map<String, String> fieldResults = results.entrySet().stream().filter(e -> e.getKey().startsWith(this.batchIdNum + "_field_")).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
         int maxNum = fieldResults.keySet().stream().map(key -> key.split("_")).filter(parts -> parts.length > 2).mapToInt(parts -> Integer.parseInt(parts[2])).max().orElse(0);
 
         List<MessageEmbed.Field> fields = new ArrayList<>();
 
-        for (int i = 0; i <= maxNum; i++) {
+        for (int i = 0; i < maxNum; i++) {
             String name = fieldResults.get(this.batchIdNum + "_field_" + i + "_name");
             String value = fieldResults.get(this.batchIdNum + "_field_" + i + "_value");
             fields.add(new MessageEmbed.Field(name, value, this.fields.get(i).isInline()));
@@ -1131,5 +1154,9 @@ public class TranslateEmbedBuilder {
         this.fields.addAll(fields);
 
         return this;
+    }
+
+    public CompletableFuture<TranslateEmbedBuilder> translateAsync(@NotNull String targetLanguage) {
+        return CompletableFuture.supplyAsync(() -> translate(targetLanguage));
     }
 }

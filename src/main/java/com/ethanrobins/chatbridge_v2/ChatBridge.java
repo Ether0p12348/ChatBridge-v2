@@ -29,11 +29,15 @@ public class ChatBridge {
     private static String token;
 
     private static boolean debug = false;
+    private static boolean dev = false;
 
     public static void main(String[] args) {
         if (args.length > 0) {
             if (Arrays.stream(args).anyMatch("--debug"::equalsIgnoreCase)) {
                 debug = true;
+            }
+            if (Arrays.stream(args).anyMatch("--dev"::equalsIgnoreCase)) {
+                dev = true;
             }
         }
         loadSecret();
@@ -49,8 +53,8 @@ public class ChatBridge {
             jda.updateCommands().addCommands(
                     //localeSlashCommand("translate", "Translate a message or input to another language"),
                     //Commands.slash("translate", "Translate a message or input to another language"),
-                    localeContextCommand(Command.Type.MESSAGE, "Secret Translation"),
-                    localeContextCommand(Command.Type.MESSAGE, "Public Translation")
+                    localeContextCommand(Command.Type.MESSAGE, "Secret Translation" + (dev ? " (dev)" : "")),
+                    localeContextCommand(Command.Type.MESSAGE, "Public Translation" + (dev ? " (dev)" : ""))
             ).queue();
         } else {
             throw new RuntimeException("Token not found!");
@@ -64,12 +68,10 @@ public class ChatBridge {
                 throw new RuntimeException("Secret file not found!");
             }
 
-            /*File configFile = new File(resource.getFile());
-            secret = new Ini(configFile);
-            token = secret.get("discord", "token");*/
             try (InputStream inputStream = resource.openStream()) {
                 secret = new Ini(inputStream);
-                token = secret.get("discord", "token");
+                String tokenKey = dev ? "devToken" : "token";
+                token = secret.get("discord", tokenKey);
             }
         } catch (IOException err) {
             throw new RuntimeException(err);
@@ -86,6 +88,10 @@ public class ChatBridge {
 
     public static boolean isDebug() {
         return debug;
+    }
+
+    public static boolean isDev() {
+        return dev;
     }
 
     private static SlashCommandData localeSlashCommand (@NotNull String name, @NotNull String description) {
@@ -198,7 +204,12 @@ public class ChatBridge {
                     sj.add("\u001B[32m" + loc.getLocale() + "\u001B[0m");
                 }
                 checkLocales.remove(loc);
-                cmd.setNameLocalization(loc, p.getResult());
+                String result = p.getResult();
+                if (p.getResult().length() > 32) {
+                    result = p.getResult().substring(0, 32);
+                    System.out.println(loc + " name localization was too long. set to " + result);
+                }
+                cmd.setNameLocalization(loc, result);
             } else {
                 if (debug) {
                     System.out.println(p.getId() + " was unable to be added to " + name + " nameLocalizations: Set to " + loc.getLocale());

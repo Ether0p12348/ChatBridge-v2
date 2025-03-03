@@ -3,6 +3,8 @@ package com.ethanrobins.chatbridge_v2;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
@@ -82,8 +84,9 @@ public class Batch {
                         sj.add("\u001B[32m" + payloads.get(in).getId() + "\u001B[0m");
                     }
                     percent.set(percent.get() + (100.0f / payloads.size()));
+                    BigDecimal roundedPercent = BigDecimal.valueOf(percent.get()).setScale(1, RoundingMode.CEILING);
 
-                    System.out.print("\r\u001B[34mBatch Progress: \u001B[35m- \u001B[33m" + percent.get() + "%\u001B[0m");
+                    System.out.print("\r\u001B[34mBatch Progress: \u001B[35m- \u001B[33m" + roundedPercent.toPlainString() + "%      \u001B[0m");
                 });
             }, i * delay, TimeUnit.SECONDS);
 
@@ -93,8 +96,8 @@ public class Batch {
         CompletableFuture.allOf(futures.values().toArray(new CompletableFuture[0])).join();
         scheduler.shutdown();
 
-        System.out.print("\r\u001B[34mBatch Progress \u001B[35m- \u001B[33m100.0%\u001B[0m");
-        System.out.println("\n  \u001B[33m" + this.id + " \u001B[35m-\u001B[0m " + sj);
+        System.out.print("\r\u001B[34mBatch Progress \u001B[35m- \u001B[33m100.0%      \u001B[0m\n");
+        System.out.println("  \u001B[33m" + this.id + " \u001B[35m-\u001B[0m " + sj);
         System.out.println("\u001B[34mBatch Completed: \u001B[33m" + this.id + "\u001B[0m");
 
         return this;

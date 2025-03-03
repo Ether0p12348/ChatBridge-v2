@@ -197,6 +197,10 @@ public class Payload {
         });
     }
 
+    public static String userMessage(@NotNull String targetLocale, @NotNull String message) {
+        return "(" + targetLocale + ")" + message;
+    }
+
     public static class Message {
         @JsonIgnore
         private final MessageRole role;
