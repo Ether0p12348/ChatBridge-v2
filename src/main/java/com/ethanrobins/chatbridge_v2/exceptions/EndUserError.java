@@ -1,4 +1,4 @@
-package com.ethanrobins.chatbridge_v2;
+package com.ethanrobins.chatbridge_v2.exceptions;
 
 import net.dv8tion.jda.api.interactions.DiscordLocale;
 

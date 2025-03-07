@@ -1,20 +1,25 @@
 package com.ethanrobins.chatbridge_v2.events;
 
 import com.ethanrobins.chatbridge_v2.*;
-import net.dv8tion.jda.api.EmbedBuilder;
+import com.ethanrobins.chatbridge_v2.drivers.MySQL;
+import com.ethanrobins.chatbridge_v2.drivers.Payload;
+import com.ethanrobins.chatbridge_v2.drivers.TranslateEmbedBuilder;
+import com.ethanrobins.chatbridge_v2.drivers.TranslateType;
+import com.ethanrobins.chatbridge_v2.exceptions.EndUserError;
+import com.ethanrobins.chatbridge_v2.utils.Messages;
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.EmbedType;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.events.interaction.command.MessageContextInteractionEvent;
+import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import net.dv8tion.jda.api.interactions.DiscordLocale;
 import net.dv8tion.jda.api.utils.messages.MessageCreateBuilder;
 import net.dv8tion.jda.api.utils.messages.MessageEditData;
 import org.jetbrains.annotations.NotNull;
 
-import java.awt.*;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -30,33 +35,40 @@ public class MessageInteraction extends ListenerAdapter {
 
         // save the user in database with their locale
         CompletableFuture.runAsync(() -> {
+            MySQL mysql = null;
             try {
-                MySQL mysql = new MySQL();
+                mysql = new MySQL();
                 MySQL.Status status = mysql.updateLocale(e.getUser().getId(), e.getUserLocale());
-                mysql.close();
 
                 User user = ChatBridge.getJDA().retrieveUserById(e.getUser().getId()).complete();
                 if (user != null) {
-                    if (status == MySQL.Status.INSERTED) {
-                        TranslateEmbedBuilder builder = new TranslateEmbedBuilder();
-                        builder.setAuthor("(" + e.getUserLocale().getLocale() + ") " + e.getUserLocale().getNativeName(), null, null, false);
-                        builder.setTitle("Welcome to ChatBridge!", null, true);
-                        builder.setDescription("Thank you for using ChatBridge!\nYour language has been set to " + e.getUserLocale().getLocale() + ".\n\nWhenever you wish to translate a message, you can use this direct messaging channel.\nAll you have to do is copy and paste the message here and I will translate the message in the language you have set.\n\n**Happy Translating!**", true);
-                        builder.setFooter("ChatBridge", null, false);
-                        builder.setColor(Color.decode("#55ccff"));
+                    System.out.println(status);
+                    if (status.isInserted()) {
+                        user.openPrivateChannel().queue(channel -> {
+                            try {
+                                channel.sendMessageEmbeds(Messages.firstInteraction(e.getUserLocale())).queue();
+                            } catch (ExecutionException | InterruptedException ex) {
+                                throw new RuntimeException(ex);
+                            }
+                        });
 
-                        CompletableFuture<TranslateEmbedBuilder> embedBuilderFuture =  builder.translateAsync(e.getUserLocale().getLocale());
-                        MessageEmbed embed = embedBuilderFuture.get().build();
-
-                        user.openPrivateChannel().queue(channel -> channel.sendMessageEmbeds(embed).queue());
+                        // check caches
+                        for (MessageReceivedEvent mre : Messages.getUnregisteredMessages(e.getUser().getId())) {
+                            Messages.removeUnregisteredMessage(mre);
+                            MessageReceived.translateMessageAsync(mre, e.getUserLocale());
+                        }
                     }
                 }
-            } catch (SQLException | RuntimeException | ExecutionException ex) {
+
+                mysql.close();
+            } catch (SQLException | RuntimeException ex) {
+                if (mysql != null && !mysql.getStatus().isClosed()) {
+                    mysql.close();
+                }
                 ex.printStackTrace();
-            } catch (InterruptedException ex) {
-                throw new RuntimeException(ex);
             }
         });
+
 
         switch (e.getName()) {
             case "Secret Translation (dev)":
@@ -174,7 +186,7 @@ public class MessageInteraction extends ListenerAdapter {
         });
     }
 
-    private EndUserError buildEndUserError(Exception ex) {
+    public static EndUserError buildEndUserError(Exception ex) {
         Map<DiscordLocale, String> localeMessages = new HashMap<>();
 
         String discordInvite = ChatBridge.getSecret().get("discord", "discordInvite");

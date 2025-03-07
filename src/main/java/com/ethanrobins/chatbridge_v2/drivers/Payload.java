@@ -1,6 +1,9 @@
-package com.ethanrobins.chatbridge_v2;
+package com.ethanrobins.chatbridge_v2.drivers;
 
+import com.ethanrobins.chatbridge_v2.ChatBridge;
+import com.ethanrobins.chatbridge_v2.Model;
 import com.ethanrobins.chatbridge_v2.exceptions.HttpErrorCode;
+import com.ethanrobins.chatbridge_v2.utils.RandomString;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -21,10 +24,10 @@ import java.util.concurrent.ExecutionException;
 
 public class Payload {
     @JsonIgnore
-    private String id = "payload_" + ChatBridge.genId(8);
+    private String id = "payload_" + RandomString.generate(8, RandomString.Content.NUMBERS);
 
     @JsonProperty("model")
-    private String model = ChatBridge.getSecret().get("chatgpt", "model");
+    private String model = Model.getDefault().getId();
 
     @JsonProperty("messages")
     private final List<Message> messages = new ArrayList<>();

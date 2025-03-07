@@ -1,10 +1,10 @@
-package com.ethanrobins.chatbridge_v2;
+package com.ethanrobins.chatbridge_v2.drivers;
 
+import com.ethanrobins.chatbridge_v2.utils.RandomString;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.EmbedType;
 import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.entities.Role;
-import net.dv8tion.jda.api.events.interaction.command.MessageContextInteractionEvent;
 import net.dv8tion.jda.api.utils.data.DataArray;
 import net.dv8tion.jda.api.utils.data.DataObject;
 import net.dv8tion.jda.internal.entities.EntityBuilder;
@@ -215,7 +215,7 @@ import java.util.stream.Collectors;
  * @see MessageEmbed
  * */
 public class TranslateEmbedBuilder {
-    private String batchIdNum = ChatBridge.genId(8);
+    private String batchIdNum = RandomString.generate(8, RandomString.Content.NUMBERS);
     private String batchId = "batch_" + batchIdNum;
     private Batch batch = new Batch(batchId);
 
@@ -370,7 +370,7 @@ public class TranslateEmbedBuilder {
     @NotNull
     public TranslateEmbedBuilder clear()
     {
-        batchIdNum = ChatBridge.genId(8);
+        batchIdNum = RandomString.generate(8, RandomString.Content.NUMBERS);
         batchId = "batch_" + batchIdNum;
         batch = new Batch(batchId);
 
