@@ -1,6 +1,7 @@
 package com.ethanrobins.chatbridge_v2;
 
 import com.ethanrobins.chatbridge_v2.drivers.TranslateType;
+import lombok.Getter;
 
 /**
  * Enum representing ChatBridge AI Models.
@@ -36,30 +37,19 @@ public enum Model {
     /**
      * The model's OpenAI Model Identifier
      */
-    private final String modelId;
+    @Getter
+    private final String id;
     /**
-     * Filter for which types are allowed to be used for the model
+     * Filter for which translate types are allowed to be used for this model
+     * <br>{@link TranslateType}{@code []}
+
      */
+    @Getter
     private final TranslateType[] allowedTypes;
 
     Model(String modelId, TranslateType... allowedTypes) {
-        this.modelId = modelId;
+        this.id = modelId;
         this.allowedTypes = allowedTypes;
-    }
-
-    /**
-     * @return The model's OpenAI Model Identifier
-     */
-    public String getId() {
-        return this.modelId;
-    }
-
-    /**
-     * Filter for which translate types are allowed to be used for this model
-     * @return {@link TranslateType}{@code []}
-     */
-    public TranslateType[] getAllowedTypes() {
-        return this.allowedTypes;
     }
 
     /**
@@ -72,6 +62,6 @@ public enum Model {
 
     @Override
     public String toString() {
-        return this.modelId;
+        return this.id;
     }
 }

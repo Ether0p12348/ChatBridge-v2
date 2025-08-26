@@ -33,7 +33,7 @@ public class RandomString {
         SYMBOLS("-_.~!@#$%^&*"),
         HEX("0123456789abcdef");
 
-        private String content;
+        private final String content;
 
         Content(String content) {
             this.content = content;

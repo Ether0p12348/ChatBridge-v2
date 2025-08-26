@@ -1,6 +1,7 @@
 package com.ethanrobins.chatbridge_v2.drivers;
 
 import com.ethanrobins.chatbridge_v2.utils.RandomString;
+import lombok.Getter;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -14,6 +15,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class Batch {
+    @Getter
     private String id = "batch_" + RandomString.generate(8, RandomString.Content.NUMBERS);
     private final List<Payload> payloads = new ArrayList<>();
 
@@ -42,10 +44,6 @@ public class Batch {
     public Batch remove (String id) {
         payloads.removeIf(payload -> payload.getId().equals(id));
         return this;
-    }
-
-    public String getId() {
-        return this.id;
     }
 
     public List<Payload> getPayloads() {

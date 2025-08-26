@@ -1,5 +1,8 @@
 package com.ethanrobins.chatbridge_v2.exceptions;
 
+import lombok.Getter;
+
+@Getter
 public class HttpErrorCode extends Exception {
     private final int statusCode;
 
@@ -11,10 +14,6 @@ public class HttpErrorCode extends Exception {
     public HttpErrorCode(int statusCode) {
         super("Http Error Code: " + statusCode);
         this.statusCode = statusCode;
-    }
-
-    public int getStatusCode() {
-        return statusCode;
     }
 
     @Override

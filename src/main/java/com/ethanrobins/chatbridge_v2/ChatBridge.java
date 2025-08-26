@@ -1,8 +1,10 @@
 package com.ethanrobins.chatbridge_v2;
 
 import com.ethanrobins.chatbridge_v2.drivers.MySQL;
+import com.ethanrobins.chatbridge_v2.events.GuildEvents;
 import com.ethanrobins.chatbridge_v2.events.MessageInteraction;
 import com.ethanrobins.chatbridge_v2.events.MessageReceived;
+import lombok.Getter;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.interactions.DiscordLocale;
@@ -47,12 +49,37 @@ import java.util.*;
  * @see Model
  */
 public class ChatBridge {
+    /**
+     * Retrieves the JDA instance.
+     * <br>The {@link JDA} instance or {@code null} if not yet initialized.
+     */
+    @Getter
     private static JDA jda;
+    /**
+     * Retrieves the secret configuration.
+     * <br>The {@link Ini} instance containing the secret configuration.
+     */
+    @Getter
     private static Ini secret;
     private static String token;
+    /**
+     * Retrieves the list of registered commands.
+     * <br>A {@link List} of {@link Command} objects.
+     */
+    @Getter
     private static final List<Command> commands = new ArrayList<>();
 
+    /**
+     * Checks whether the application is in debug mode.
+     * <br>{@code true} if debug mode is enabled, otherwise {@code false}.
+     */
+    @Getter
     private static boolean debug = false;
+    /**
+     * Checks whether the application is in development mode.
+     * <br>{@code true} if development mode is enabled, otherwise {@code false}.
+     */
+    @Getter
     private static boolean dev = false;
 
     /**
@@ -81,9 +108,10 @@ public class ChatBridge {
 
             jda = jdaBuilder
                     .enableIntents(GatewayIntent.MESSAGE_CONTENT, GatewayIntent.GUILD_MESSAGES, GatewayIntent.GUILD_MEMBERS, GatewayIntent.DIRECT_MESSAGES)
-                    .addEventListeners(new MessageInteraction(), new MessageReceived())
+                    .addEventListeners(new MessageInteraction(), new MessageReceived(), new GuildEvents())
                     .build();
 
+            // TODO: Create a slash command for getting a link to the website depending on their locale
             jda.updateCommands().addCommands(
                     //localeSlashCommand("translate", "Translate a message or input to another language"),
                     //Commands.slash("translate", "Translate a message or input to another language"),
@@ -133,30 +161,6 @@ public class ChatBridge {
     }
 
     /**
-     * Retrieves the JDA instance.
-     * @return The {@link JDA} instance or {@code null} if not yet initialized.
-     */
-    public static JDA getJDA() {
-        return jda;
-    }
-
-    /**
-     * Retrieves the secret configuration.
-     * @return The {@link Ini} instance containing the secret configuration.
-     */
-    public static Ini getSecret() {
-        return secret;
-    }
-
-    /**
-     * Retrieves the list of registered commands.
-     * @return A {@link List} of {@link Command} objects.
-     */
-    public static List<Command> getCommands() {
-        return commands;
-    }
-
-    /**
      * Retrieves a command by its name.
      * @param name The name of the command to search for.
      * @return The {@link Command} object matching the given name, or {@code null} if not found.
@@ -170,24 +174,10 @@ public class ChatBridge {
         return null;
     }
 
-    /**
-     * Checks whether the application is in debug mode.
-     * @return {@code true} if debug mode is enabled, otherwise {@code false}.
-     */
-    public static boolean isDebug() {
-        return debug;
-    }
-
-    /**
-     * Checks whether the application is in development mode.
-     * @return {@code true} if development mode is enabled, otherwise {@code false}.
-     */
-    public static boolean isDev() {
-        return dev;
-    }
-
     private static CommandData privateTranslationInit() {
-        return new ManualCommandRegistry(Command.Type.MESSAGE, "Private Translation" + (dev ? " (dev)" : ""))
+        return new ManualCommandRegistry(Command.Type.MESSAGE, "priv-translate" + (dev ? "-dev" : ""))
+                .add(DiscordLocale.ENGLISH_US, "Private Translation")
+                .add(DiscordLocale.ENGLISH_UK, "Private Translation")
                 .add(DiscordLocale.BULGARIAN, "Частен превод")
                 .add(DiscordLocale.CHINESE_CHINA, "私人翻译")
                 .add(DiscordLocale.CHINESE_TAIWAN, "私人翻譯")
@@ -222,7 +212,9 @@ public class ChatBridge {
     }
 
     private static CommandData publicTranslationInit() {
-        return new ManualCommandRegistry(Command.Type.MESSAGE, "Public Translation")
+        return new ManualCommandRegistry(Command.Type.MESSAGE, "pub-translate" + (dev ? "-dev" : ""))
+                .add(DiscordLocale.ENGLISH_US, "Public Translation")
+                .add(DiscordLocale.ENGLISH_UK, "Public Translation")
                 .add(DiscordLocale.BULGARIAN, "Публичен превод")
                 .add(DiscordLocale.CHINESE_CHINA, "公开翻译")
                 .add(DiscordLocale.CHINESE_TAIWAN, "公開翻譯")

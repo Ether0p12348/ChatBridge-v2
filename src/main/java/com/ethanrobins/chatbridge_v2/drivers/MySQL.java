@@ -1,14 +1,13 @@
 package com.ethanrobins.chatbridge_v2.drivers;
 
 import com.ethanrobins.chatbridge_v2.ChatBridge;
+import lombok.Getter;
 import net.dv8tion.jda.api.interactions.DiscordLocale;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.sql.*;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 
 /**
  * <b>Handles the management of a MySQL database connection and related operations.</b>
@@ -61,12 +60,18 @@ import java.util.Objects;
  * @see Connection
  */
 public class MySQL {
+    @Getter
     private static int counter = 0;
 
-    private static final String URL = "jdbc:mysql://localhost:3306/" + ChatBridge.getSecret().get("mysql", "db");
+    private static final String ADDRESS = ChatBridge.getSecret().get("mysql", "address");
+    private static final String PORT = ChatBridge.getSecret().get("mysql", "port");
+    private static final String DB = ChatBridge.getSecret().get("mysql", "db");
     private static final String USER = ChatBridge.getSecret().get("mysql", "user");
     private static final String PASS = ChatBridge.getSecret().get("mysql", "pass");
 
+    private static final String URL = "jdbc:mysql://" + ADDRESS + ":" + PORT + "/" + DB;
+
+    @Getter
     private final Status status = new Status();
     private final Connection conn;
 
@@ -114,22 +119,6 @@ public class MySQL {
         } else {
             return this.conn;
         }
-    }
-
-    /**
-     * Retrieves the number of currently open {@link MySQL} connections.
-     * @return The number of active MySQL connections.
-     */
-    public static int getCounter() {
-        return counter;
-    }
-
-    /**
-     * Retrieves the most recent {@link Status}.
-     * @return The current {@link Status}.
-     */
-    public Status getStatus() {
-        return this.status;
     }
 
     /**
@@ -215,7 +204,7 @@ public class MySQL {
     public DiscordLocale getLocale(@NotNull String userId, boolean returnNullIfNotExists) throws SQLException {
         if (this.status.isConnected()) {
             try {
-                PreparedStatement stmt = this.conn.prepareStatement("SELECT locale FROM userstore WHERE user_id=?");
+                PreparedStatement stmt = this.conn.prepareStatement("SELECT locale FROM chatbridge_userstore WHERE user_id=?");
                 stmt.setString(1, userId);
                 ResultSet result = stmt.executeQuery();
                 DiscordLocale locale = DiscordLocale.from(result.getString("locale"));
@@ -291,7 +280,7 @@ public class MySQL {
             try {
                 Status status = this.status.setStatus(getLocale(userId, true) != null ? State.UPDATED : State.INSERTED);
 
-                PreparedStatement stmt = this.conn.prepareStatement("INSERT INTO userstore (user_id, locale) VALUES (?, ?) ON DUPLICATE KEY UPDATE locale=?");
+                PreparedStatement stmt = this.conn.prepareStatement("INSERT INTO chatbridge_userstore (user_id, locale) VALUES (?, ?) ON DUPLICATE KEY UPDATE locale=?");
                 stmt.setString(1, userId);
                 stmt.setString(2, locale.getLocale());
                 stmt.setString(3, locale.getLocale());
@@ -305,6 +294,105 @@ public class MySQL {
         } else {
             return this.status.setStatus(State.INSERTED);
         }
+    }
+
+    public @NotNull Map<String, Boolean> getGuilds() throws SQLException {
+        if (this.status.isConnected()) {
+            Map<String, Boolean> guilds = new HashMap<>();
+            try {
+                PreparedStatement stmt = this.conn.prepareStatement("SELECT * FROM chatbridge_guildstore");
+                ResultSet result = stmt.executeQuery();
+
+                while (result.next()) {
+                    guilds.put(result.getString("guild_id"), result.getBoolean("status"));
+                }
+
+                if (guilds.isEmpty()) {
+                    this.status.setFailed(new SQLException("No guilds found!"));
+                } else {
+                    this.status.setStatus(State.SUCCESS);
+                }
+                return guilds;
+            } catch (SQLException ex) {
+                this.status.setFailed(ex);
+                return guilds;
+            }
+        }
+
+        if (ChatBridge.isDev()) {
+            this.status.setStatus(State.SUCCESS);
+            return new HashMap<>();
+        }
+        throw new SQLException("MySQL is not connected!");
+    }
+
+    public @Nullable Boolean getGuildStatus(@NotNull String guildId) {
+        if (this.status.isConnected()) {
+            try {
+                PreparedStatement stmt = this.conn.prepareStatement("SELECT `status` FROM chatbridge_guildstore WHERE guild_id=? LIMIT 1");
+                stmt.setString(1, guildId);
+                ResultSet result = stmt.executeQuery();
+
+                if (!result.next()) {
+                    this.status.setStatus(State.SUCCESS);
+                    if (ChatBridge.isDebug()) {
+                        System.out.println("Guild status for " + guildId + ": <no row>");
+                    }
+                    return null;
+                }
+
+                boolean guildStatus = result.getBoolean("status");
+                if (result.wasNull()) {
+                    this.status.setStatus(State.SUCCESS);
+                    if (ChatBridge.isDebug()) {
+                        System.out.println("Guild status for " + guildId + ": <NULL column>");
+                    }
+                    return null;
+                }
+
+                this.status.setStatus(State.SUCCESS);
+                if (ChatBridge.isDebug()) {
+                    System.out.println("Guild status for " + guildId + ": " + guildStatus);
+                }
+                return guildStatus;
+            } catch (SQLException ex) {
+                if (ChatBridge.isDev()) {
+                    this.status.setStatus(State.SUCCESS);
+                } else {
+                    this.status.setFailed(ex);
+                }
+                if (ChatBridge.isDebug()) {
+                    System.out.println("Guild status for " + guildId + ": null: " + ex.getMessage());
+                }
+                return null;
+            }
+        }
+
+        return null;
+    }
+
+    public Status setGuildStatus(@NotNull String guildId, boolean guildStatus) {
+        if (this.status.isConnected()) {
+            try {
+                Status status = this.status.setStatus(getGuildStatus(guildId) != null ? State.UPDATED : State.INSERTED);
+
+                PreparedStatement stmt = this.conn.prepareStatement("INSERT INTO chatbridge_guildstore (guild_id, status) values (?, ?) ON DUPLICATE KEY UPDATE status=?");
+                stmt.setString(1, guildId);
+                stmt.setBoolean(2, guildStatus);
+                stmt.setBoolean(3, guildStatus);
+                stmt.executeUpdate();
+
+                return status;
+            } catch (SQLException ex) {
+                ex.printStackTrace();
+                return this.status.setFailed(ex);
+            }
+        }
+
+        if (ChatBridge.isDev()) {
+            return this.status.setStatus(State.SUCCESS);
+        }
+        return this.status.setFailed(new SQLException("MySQL is not connected!"));
     }
 
     /**
@@ -393,13 +481,13 @@ public class MySQL {
             for (State s : this.states) {
                 if (s.isCategory(state.getCategory())) {
                     this.states.remove(s);
-                    this.states.add(state);
                     if (s != State.FAILED_CONNECTION && s != State.FAILED) {
                         this.ex = null;
                     }
                     break;
                 }
             }
+            this.states.add(state);
             return this;
         }
 
@@ -628,6 +716,7 @@ public class MySQL {
     /**
      * Represents various states within the system, each associated with a specific {@link StateCategory}.
      */
+    @Getter
     public enum State {
         /**
          * The database connection has not been established.
@@ -671,6 +760,10 @@ public class MySQL {
          */
         INSERTED(StateCategory.RESPONSE);
 
+        /**
+         * Retrieves the {@link StateCategory} associated with this {@link State}.
+         * The {@link StateCategory} of this {@link State}.
+         */
         private final StateCategory category;
 
         /**
@@ -680,15 +773,6 @@ public class MySQL {
          */
         State(StateCategory category) {
             this.category = category;
-        }
-
-        /**
-         * Retrieves the {@link StateCategory} associated with this {@link State}.
-         *
-         * @return The {@link StateCategory} of this {@link State}.
-         */
-        public StateCategory getCategory() {
-            return this.category;
         }
 
         /**

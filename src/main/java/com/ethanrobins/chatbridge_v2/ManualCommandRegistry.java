@@ -1,5 +1,6 @@
 package com.ethanrobins.chatbridge_v2;
 
+import lombok.Getter;
 import net.dv8tion.jda.api.interactions.DiscordLocale;
 import net.dv8tion.jda.api.interactions.commands.Command;
 import net.dv8tion.jda.api.interactions.commands.build.CommandData;
@@ -11,6 +12,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 
+@Getter
 public class ManualCommandRegistry {
     private final List<LocaleCommand> commands = new ArrayList<>();
     private final Command.Type type;
@@ -57,10 +59,6 @@ public class ManualCommandRegistry {
         return this;
     }
 
-    public List<LocaleCommand> getCommands() {
-        return this.commands;
-    }
-
     @Nullable
     public LocaleCommand getCommand(@NotNull DiscordLocale locale) {
         for (LocaleCommand c : commands) {
@@ -71,21 +69,9 @@ public class ManualCommandRegistry {
         return null;
     }
 
-    public Command.Type getType() {
-        return this.type;
-    }
-
-    public String getName() {
-        return this.name;
-    }
-
     public ManualCommandRegistry setDescription(@NotNull String description) {
         this.description = description;
         return this;
-    }
-
-    public String getDescription() {
-        return this.description;
     }
 
     public CommandData build() throws IllegalStateException{
@@ -115,6 +101,7 @@ public class ManualCommandRegistry {
         }
     }
 
+    @Getter
     public static class LocaleCommand {
         private final DiscordLocale locale;
         private final String name;
@@ -143,16 +130,5 @@ public class ManualCommandRegistry {
             this.description = description;
         }
 
-        public DiscordLocale getLocale() {
-            return this.locale;
-        }
-
-        public String getName() {
-            return this.name;
-        }
-
-        public String getDescription() {
-            return this.description;
-        }
     }
 }

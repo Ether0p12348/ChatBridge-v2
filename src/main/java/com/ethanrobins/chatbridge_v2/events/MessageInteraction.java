@@ -28,6 +28,7 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
+// TODO: Add translations to link embeds
 public class MessageInteraction extends ListenerAdapter {
     @Override
     public void onMessageContextInteraction(@NotNull MessageContextInteractionEvent e) {
@@ -40,7 +41,7 @@ public class MessageInteraction extends ListenerAdapter {
                 mysql = new MySQL();
                 MySQL.Status status = mysql.updateLocale(e.getUser().getId(), e.getUserLocale());
 
-                User user = ChatBridge.getJDA().retrieveUserById(e.getUser().getId()).complete();
+                User user = ChatBridge.getJda().retrieveUserById(e.getUser().getId()).complete();
                 if (user != null) {
                     System.out.println(status);
                     if (status.isInserted()) {
@@ -71,10 +72,10 @@ public class MessageInteraction extends ListenerAdapter {
 
 
         switch (e.getName()) {
-            case "Secret Translation (dev)":
-            case "Public Translation (dev)":
-            case "Secret Translation":
-            case "Public Translation":
+            case "priv-translate-dev":
+            case "pub-translate-dev":
+            case "priv-translate":
+            case "pub-translate":
                 boolean isPublic = e.getName().equals("Public Translation") || e.getName().equals("Public Translation (dev)");
                 Member member = e.getMember();
                 if (member != null && isPublic && e.getGuild() != null && !e.getMember().hasPermission(e.getGuildChannel(), Permission.MESSAGE_SEND)) {

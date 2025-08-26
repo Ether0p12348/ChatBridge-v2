@@ -1,5 +1,7 @@
 package com.ethanrobins.chatbridge_v2.drivers;
 
+import lombok.Getter;
+
 /**
  * Enum representing supported translation types for ChatBridge AI Models
  * <br><br><b>Translate Types:</b>
@@ -9,6 +11,7 @@ package com.ethanrobins.chatbridge_v2.drivers;
  * <br>{@link TranslateType#CAPTION}
  * @see com.ethanrobins.chatbridge_v2.Model
  */
+@Getter
 public enum TranslateType {
     /**
      * <b>WARNING:</b> Only used for models chatbridge-13 and later.
@@ -37,18 +40,15 @@ public enum TranslateType {
 
     /**
      * The system prompt used by ChatBridge AI Models
+     * -- GETTER --
+     *
+     * @return the system prompt used by ChatBridge AI Models
+
      */
     private final String systemPrompt;
 
     TranslateType(String systemPrompt) {
         this.systemPrompt = systemPrompt;
-    }
-
-    /**
-     * @return the system prompt used by ChatBridge AI Models
-     */
-    public String getSystemPrompt() {
-        return systemPrompt;
     }
 
     @Override

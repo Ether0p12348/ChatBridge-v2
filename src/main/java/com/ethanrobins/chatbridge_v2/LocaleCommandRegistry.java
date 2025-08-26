@@ -4,6 +4,7 @@ import com.ethanrobins.chatbridge_v2.drivers.Batch;
 import com.ethanrobins.chatbridge_v2.drivers.Payload;
 import com.ethanrobins.chatbridge_v2.drivers.TranslateType;
 import com.ethanrobins.chatbridge_v2.utils.RandomString;
+import lombok.Getter;
 import net.dv8tion.jda.api.interactions.DiscordLocale;
 import net.dv8tion.jda.api.interactions.commands.Command;
 import net.dv8tion.jda.api.interactions.commands.build.CommandData;
@@ -262,8 +263,17 @@ public class LocaleCommandRegistry {
      * removing, and managing multiple {@link SlashCommandPayload} instances and provides
      * an option to queue the batch for asynchronous processing with a delay.</p>
      */
+    @Getter
     public static class SlashCommandBatch {
+        /**
+         * Retrieves the ID of the batch.
+         * <br>The ID of this batch.
+         */
         private String id = "slashbatch_" + RandomString.generate(8, RandomString.Content.NUMBERS);
+        /**
+         * Retrieves the list of payloads in the batch.
+         * <br>A {@link List} of {@link SlashCommandPayload} objects in the batch.
+         */
         private final List<SlashCommandPayload> payloads = new ArrayList<>();
 
         /**
@@ -314,24 +324,6 @@ public class LocaleCommandRegistry {
         public SlashCommandBatch remove (String id) {
             payloads.removeIf(payload -> payload.getId().equals(id));
             return this;
-        }
-
-        /**
-         * Retrieves the ID of the batch.
-         *
-         * @return The ID of this batch.
-         */
-        public String getId() {
-            return this.id;
-        }
-
-        /**
-         * Retrieves the list of payloads in the batch.
-         *
-         * @return A {@link List} of {@link SlashCommandPayload} objects in the batch.
-         */
-        public List<SlashCommandPayload> getPayloads() {
-            return this.payloads;
         }
 
         /**
