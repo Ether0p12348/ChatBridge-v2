@@ -1,8 +1,6 @@
 package com.ethanrobins.chatbridge_v2.events;
 
-import com.ethanrobins.chatbridge_v2.drivers.MySQL;
-import com.ethanrobins.chatbridge_v2.drivers.Payload;
-import com.ethanrobins.chatbridge_v2.drivers.TranslateType;
+import com.ethanrobins.chatbridge_v2.drivers.*;
 import com.ethanrobins.chatbridge_v2.exceptions.EndUserError;
 import com.ethanrobins.chatbridge_v2.utils.Messages;
 import net.dv8tion.jda.api.entities.MessageEmbed;
@@ -77,9 +75,11 @@ public class MessageReceived extends ListenerAdapter {
         event.getMessage().reply(loadingMsg).queue(message -> {
             CompletableFuture.runAsync(() -> {
                 try {
-                    Payload payload = new Payload(null, TranslateType.DECORATED.getSystemPrompt(), Payload.userMessage(targetLocale, event.getMessage().getContentRaw()), 5000);
-                    payload.translateAsync().thenAccept(result -> {
-                        String reply = event.getMessage().getJumpUrl() + ": " + result;
+                    Request request = new Request(new Request.Prompt(null, null, targetLocale, event.getMessage().getContentRaw()));
+                    request.queue().thenAccept(response -> {
+                        Response.Data responseData = response.getOutput().getContent().getData();
+                        String reply = event.getMessage().getJumpUrl() + ": **(" + responseData.getSource().getTag() + ") " + responseData.getSource().getLang() + " → (" + responseData.getTarget().getTag() + ") " + responseData.getTarget().getLang() + "**\n" +
+                                responseData.getTarget().getExplicit();
                         message.editMessage(reply).queue();
                     }).exceptionally(ex -> {
                         ex.printStackTrace();
@@ -87,6 +87,18 @@ public class MessageReceived extends ListenerAdapter {
                         message.editMessage(err.getLocaleMessages().get(locale)).queue();
                         return null;
                     });
+
+//                try {
+//                    Payload payload = new Payload(null, TranslateType.DECORATED.getSystemPrompt(), Payload.userMessage(targetLocale, event.getMessage().getContentRaw()), 5000);
+//                    payload.translateAsync().thenAccept(result -> {
+//                        String reply = event.getMessage().getJumpUrl() + ": " + result;
+//                        message.editMessage(reply).queue();
+//                    }).exceptionally(ex -> {
+//                        ex.printStackTrace();
+//                        EndUserError err = MessageInteraction.buildEndUserError((Exception) ex);
+//                        message.editMessage(err.getLocaleMessages().get(locale)).queue();
+//                        return null;
+//                    });
                 } catch (Exception ex) {
                     ex.printStackTrace();
                     EndUserError err = MessageInteraction.buildEndUserError(ex);

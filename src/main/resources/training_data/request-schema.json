@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://chatbridge.app/schemas/translation/request-schema.json",
+  "title": "TranslationRequest",
+  "type": "object",
+  "additionalProperties": false,
+  "properties":{
+    "type": {
+      "type": "string",
+      "enum": ["safe", "explicit", "both"],
+      "description": "Desired output policy.",
+      "default": "both"
+    },
+    "tgt": {
+      "$ref": "#/$defs/bcp47Tag"
+    },
+    "msg": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The input message to translate."
+    }
+  },
+  "required": ["type", "tgt", "msg"],
+  "$defs": {
+    "bcp47Tag": {
+      "type": "string",
+      "description": "A BCP-47 language tag.",
+      "anyOf": [
+        {
+          "pattern": "^(?:(?:[A-Za-z]{2,3}(?:-[A-Za-z]{3}){0,3})|[A-Za-z]{4}|[A-Za-z]{5,8})(?:-[A-Za-z]{4})?(?:-(?:[A-Za-z]{2}|[0-9]{3}))?(?:-(?:[A-Za-z0-9]{5,8}|[0-9][A-Za-z0-9]{3}))*?(?:-(?:[0-9A-WY-Za-wy-z](?:-[A-Za-z0-9]{2,8})+))*?(?:-x(?:-[A-Za-z0-9]{1,8})+)?$"
+        },
+        {
+          "enum": ["en-GB-oed","i-ami","i-bnn","i-default","i-enochian","i-hak","i-klingon","i-lux","i-mingo","i-navajo","i-pwn","i-tao","i-tay","i-tsu","sgn-BE-FR","sgn-BE-NL","sgn-CH-DE"]
+        }
+      ]
+    }
+  }
+}
