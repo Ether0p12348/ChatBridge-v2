@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="JsonSchemaMappingsProjectConfiguration">
+    <state>
+      <map>
+        <entry key="TranslationRequest">
+          <value>
+            <SchemaInfo>
+              <option name="generatedName" value="New Schema" />
+              <option name="name" value="TranslationRequest" />
+              <option name="relativePathToSchema" value="src/main/resources/training_data/request-schema.json" />
+              <option name="schemaVersion" value="JSON Schema 202,012" />
+              <option name="patterns">
+                <list>
+                  <Item>
+                    <option name="path" value="src/main/resources/training_data/request-example.json" />
+                  </Item>
+                </list>
+              </option>
+            </SchemaInfo>
+          </value>
+        </entry>
+        <entry key="TranslationResponse">
+          <value>
+            <SchemaInfo>
+              <option name="generatedName" value="New Schema" />
+              <option name="name" value="TranslationResponse" />
+              <option name="relativePathToSchema" value="src/main/resources/training_data/response-schema.json" />
+              <option name="schemaVersion" value="JSON Schema 202,012" />
+              <option name="patterns">
+                <list>
+                  <Item>
+                    <option name="path" value="src/main/resources/training_data/response-example.json" />
+                  </Item>
+                </list>
+              </option>
+            </SchemaInfo>
+          </value>
+        </entry>
+      </map>
+    </state>
+  </component>
+</project>

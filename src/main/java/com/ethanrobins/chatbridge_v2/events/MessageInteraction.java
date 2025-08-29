@@ -1,10 +1,7 @@
 package com.ethanrobins.chatbridge_v2.events;
 
 import com.ethanrobins.chatbridge_v2.*;
-import com.ethanrobins.chatbridge_v2.drivers.MySQL;
-import com.ethanrobins.chatbridge_v2.drivers.Payload;
-import com.ethanrobins.chatbridge_v2.drivers.TranslateEmbedBuilder;
-import com.ethanrobins.chatbridge_v2.drivers.TranslateType;
+import com.ethanrobins.chatbridge_v2.drivers.*;
 import com.ethanrobins.chatbridge_v2.exceptions.EndUserError;
 import com.ethanrobins.chatbridge_v2.utils.Messages;
 import net.dv8tion.jda.api.Permission;
@@ -138,9 +135,11 @@ public class MessageInteraction extends ListenerAdapter {
                 embeds.removeIf(embed -> embed.getType() != EmbedType.RICH);
 
                 if (embeds.isEmpty()) {
-                    Payload payload = new Payload(null, TranslateType.DECORATED.getSystemPrompt(), Payload.userMessage(targetLocale, event.getTarget().getContentRaw()), 5000);
-                    payload.translateAsync().thenAccept(result -> {
-                        String reply = event.getTarget().getJumpUrl() + ": " + result;
+                    Request request = new Request(new Request.Prompt(null, null, event.getUserLocale().getLocale(), event.getTarget().getContentRaw()));
+                    request.queue().thenAccept(response -> {
+                        Response.Data responseData = response.getOutput().getContent().getData();
+                        String reply = event.getTarget().getJumpUrl() + ": **(" + responseData.getSource().getTag() + ") " + responseData.getSource().getLang() + " → (" + responseData.getTarget().getTag() + ") " + responseData.getTarget().getLang() + "**\n" +
+                                responseData.getTarget().getSafe();
                         event.getHook().editOriginal(reply).queue();
                     }).exceptionally(ex -> {
                         ex.printStackTrace();
@@ -148,36 +147,47 @@ public class MessageInteraction extends ListenerAdapter {
                         event.getHook().setEphemeral(true).editOriginal(err.getLocaleMessages().get(event.getUserLocale())).queue();
                         return null;
                     });
+//                    Payload payload = new Payload(null, TranslateType.DECORATED.getSystemPrompt(), Payload.userMessage(targetLocale, event.getTarget().getContentRaw()), 5000);
+//                    payload.translateAsync().thenAccept(result -> {
+//                        String reply = event.getTarget().getJumpUrl() + ": " + result;
+//                        event.getHook().editOriginal(reply).queue();
+//                    }).exceptionally(ex -> {
+//                        ex.printStackTrace();
+//                        EndUserError err = buildEndUserError((Exception) ex);
+//                        event.getHook().setEphemeral(true).editOriginal(err.getLocaleMessages().get(event.getUserLocale())).queue();
+//                        return null;
+//                    });
                 } else {
-                    CompletableFuture<String> mainMessageFuture = CompletableFuture.completedFuture(null);
-                    event.getTarget().getContentRaw();
-                    if (event.getTarget().getContentRaw() != null && !event.getTarget().getContentRaw().isEmpty()) {
-                        Payload mainMessagePayload = new Payload(null, TranslateType.DECORATED.getSystemPrompt(), Payload.userMessage(targetLocale, event.getTarget().getContentRaw()), 5000);
-                        mainMessageFuture = mainMessagePayload.translateAsync();
-                    } else {
-                        Payload mainMessagePayload = new Payload(null, TranslateType.CAPTION.getSystemPrompt(), Payload.userMessage(targetLocale, event.getTarget().getContentRaw()), 5000);
-                        mainMessageFuture = mainMessagePayload.translateAsync();
-                    }
-
-                    List<CompletableFuture<TranslateEmbedBuilder>> embedFutures = new ArrayList<>();
-                    for (MessageEmbed e : embeds) {
-                        embedFutures.add(new TranslateEmbedBuilder(e).translateAsync(targetLocale));
-                    }
-
-                    mainMessageFuture.thenCombine(
-                            CompletableFuture.allOf(embedFutures.toArray(new CompletableFuture[0]))
-                                    .thenApply(v -> embedFutures.stream()
-                                            .map(CompletableFuture::join)
-                                            .map(TranslateEmbedBuilder::build)
-                                            .toList()),
-                            (mainMessage, builtEmbeds) -> MessageEditData.fromCreateData(new MessageCreateBuilder().setContent(mainMessage).setEmbeds(builtEmbeds).build())
-                    ).thenAccept(finalMessage -> event.getHook().editOriginal(finalMessage).queue())
-                            .exceptionally(ex -> {
-                        ex.printStackTrace();
-                        EndUserError err = buildEndUserError((Exception) ex);
-                        event.getHook().setEphemeral(true).editOriginal(err.getLocaleMessages().get(event.getUserLocale())).queue();
-                        return null;
-                    });
+                    event.getHook().setEphemeral(true).editOriginal("Embeds are not supported at this time.").queue();
+//                    CompletableFuture<String> mainMessageFuture = CompletableFuture.completedFuture(null);
+//                    event.getTarget().getContentRaw();
+//                    if (event.getTarget().getContentRaw() != null && !event.getTarget().getContentRaw().isEmpty()) {
+//                        Payload mainMessagePayload = new Payload(null, TranslateType.DECORATED.getSystemPrompt(), Payload.userMessage(targetLocale, event.getTarget().getContentRaw()), 5000);
+//                        mainMessageFuture = mainMessagePayload.translateAsync();
+//                    } else {
+//                        Payload mainMessagePayload = new Payload(null, TranslateType.CAPTION.getSystemPrompt(), Payload.userMessage(targetLocale, event.getTarget().getContentRaw()), 5000);
+//                        mainMessageFuture = mainMessagePayload.translateAsync();
+//                    }
+//
+//                    List<CompletableFuture<TranslateEmbedBuilder>> embedFutures = new ArrayList<>();
+//                    for (MessageEmbed e : embeds) {
+//                        embedFutures.add(new TranslateEmbedBuilder(e).translateAsync(targetLocale));
+//                    }
+//
+//                    mainMessageFuture.thenCombine(
+//                            CompletableFuture.allOf(embedFutures.toArray(new CompletableFuture[0]))
+//                                    .thenApply(v -> embedFutures.stream()
+//                                            .map(CompletableFuture::join)
+//                                            .map(TranslateEmbedBuilder::build)
+//                                            .toList()),
+//                            (mainMessage, builtEmbeds) -> MessageEditData.fromCreateData(new MessageCreateBuilder().setContent(mainMessage).setEmbeds(builtEmbeds).build())
+//                    ).thenAccept(finalMessage -> event.getHook().editOriginal(finalMessage).queue())
+//                            .exceptionally(ex -> {
+//                        ex.printStackTrace();
+//                        EndUserError err = buildEndUserError((Exception) ex);
+//                        event.getHook().setEphemeral(true).editOriginal(err.getLocaleMessages().get(event.getUserLocale())).queue();
+//                        return null;
+//                    });
                 }
             } catch (Exception ex) {
                 ex.printStackTrace();

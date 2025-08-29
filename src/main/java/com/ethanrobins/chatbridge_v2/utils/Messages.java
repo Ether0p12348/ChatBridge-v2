@@ -1,7 +1,6 @@
 package com.ethanrobins.chatbridge_v2.utils;
 
 import com.ethanrobins.chatbridge_v2.ChatBridge;
-import com.ethanrobins.chatbridge_v2.drivers.TranslateEmbedBuilder;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
@@ -11,7 +10,6 @@ import net.dv8tion.jda.api.interactions.commands.Command;
 import java.awt.*;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
 public class Messages {
@@ -104,15 +102,18 @@ public class Messages {
      * @throws InterruptedException
      */
     public static MessageEmbed firstInteraction(DiscordLocale locale) throws ExecutionException, InterruptedException {
-        TranslateEmbedBuilder builder = new TranslateEmbedBuilder();
-        builder.setAuthor("(" + locale.getLocale() + ") " + locale.getNativeName(), null, null, false);
-        builder.setTitle("Welcome to ChatBridge!", null, true);
-        builder.setDescription("Thank you for using ChatBridge!\nYour language has been set to " + locale.getLocale() + ".\n\nWhenever you wish to translate a message, you can use this direct messaging channel.\nAll you have to do is copy and paste the message here and I will translate the message in the language you have set.\n\n**Happy Translating!**", true);
-        builder.setFooter("ChatBridge", null, false);
-        builder.setColor(Color.decode("#55ccff"));
-
-        CompletableFuture<TranslateEmbedBuilder> embedBuilderFuture =  builder.translateAsync(locale.getLocale());
-        return embedBuilderFuture.get().build();
+//        TranslateEmbedBuilder builder = new TranslateEmbedBuilder();
+//        builder.setAuthor("(" + locale.getLocale() + ") " + locale.getNativeName(), null, null, false);
+//        builder.setTitle("Welcome to ChatBridge!", null, true);
+//        builder.setDescription("Thank you for using ChatBridge!\nYour language has been set to " + locale.getLocale() + ".\n\nWhenever you wish to translate a message, you can use this direct messaging channel.\nAll you have to do is copy and paste the message here and I will translate the message in the language you have set.\n\n**Happy Translating!**", true);
+//        builder.setFooter("ChatBridge", null, false);
+//        builder.setColor(Color.decode("#55ccff"));
+//
+//        CompletableFuture<TranslateEmbedBuilder> embedBuilderFuture =  builder.translateAsync(locale.getLocale());
+//        return embedBuilderFuture.get().build();
+        EmbedBuilder b = new EmbedBuilder();
+        b.setDescription("functions that drive this message are currently unavailable.");
+        return b.build();
     }
 
     /**

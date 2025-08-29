@@ -2,43 +2,22 @@ package com.ethanrobins.chatbridge_v2;
 
 import com.ethanrobins.chatbridge_v2.drivers.TranslateType;
 import lombok.Getter;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Enum representing ChatBridge AI Models.
- * <br>TODO: Implement the TranslateType filter to TranslateType usages.
- * <br>TODO: Complete implementation of Models in bot.
- * <br>TODO: Complete update to chatbridge-13 (keep logic for chatbridge-12 support)
  * <br><br><b>Models:</b>
- * <br>{@link Model#CHATBRIDGE_12}
- * <br>{@link Model#CHATBRIDGE_13}
+ * <br>{@link Model#CHATBRIDGE_14}
  * @see TranslateType
  */
 public enum Model {
-    /**
-     * Initial <b>tracked</b> model
-     * <br><br><b>Allowed {@link TranslateType}:</b>
-     * <br>{@link TranslateType#PLAIN}
-     * <br>{@link TranslateType#DECORATED}
-     * <br>{@link TranslateType#CAPTION}
-     */
-    CHATBRIDGE_12("ft:gpt-4o-mini-2024-07-18:smok2314:chatbridge-12:B5ipZVOs", TranslateType.PLAIN, TranslateType.DECORATED, TranslateType.CAPTION),
-    /**
-     * <b>Change Log</b> (from {@link Model#CHATBRIDGE_12}):
-     * <ul>
-     *     <li>Merged {@link TranslateType#DECORATED} and {@link TranslateType#PLAIN} to {@link TranslateType#TRANSLATE}</li>
-     *     <li>Refined {@link TranslateType#CAPTION}</li>
-     * </ul>
-     * <br><b>Allowed {@link TranslateType}</b>
-     * <br>{@link TranslateType#TRANSLATE}
-     * <br>{@link TranslateType#CAPTION}
-     */
-    CHATBRIDGE_13("ft:gpt-4o-mini-2024-07-18:smok2314:chatbridge-13:B8E7YvCr", TranslateType.TRANSLATE, TranslateType.CAPTION);
+    CHATBRIDGE_14("ft:gpt-4.1-mini-2025-04-14:avidzenith:chatbridge-14-1:C9SjcnO5", TranslateType.BUNDLE_V1);
 
     /**
      * The model's OpenAI Model Identifier
      */
     @Getter
-    private final String id;
+    private @NotNull final String id;
     /**
      * Filter for which translate types are allowed to be used for this model
      * <br>{@link TranslateType}{@code []}
@@ -47,8 +26,8 @@ public enum Model {
     @Getter
     private final TranslateType[] allowedTypes;
 
-    Model(String modelId, TranslateType... allowedTypes) {
-        this.id = modelId;
+    Model(String id, TranslateType... allowedTypes) {
+        this.id = id;
         this.allowedTypes = allowedTypes;
     }
 
@@ -57,7 +36,7 @@ public enum Model {
      * @return Default {@link Model}
      */
     public static Model getDefault() {
-        return CHATBRIDGE_13;
+        return CHATBRIDGE_14;
     }
 
     @Override
