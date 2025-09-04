@@ -1,3 +1,4 @@
+// TODO: OUTDATED, OUT OF USE, CRITICAL (hence why commented)
 //package com.ethanrobins.chatbridge_v2;
 //
 //import com.ethanrobins.chatbridge_v2.drivers.Batch;

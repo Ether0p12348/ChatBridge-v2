@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 
+// TODO: OUTDATED - idek what this was supposed to be for
 public class Messages {
     /**
      * <b>Unregistered Message Cache.</b>

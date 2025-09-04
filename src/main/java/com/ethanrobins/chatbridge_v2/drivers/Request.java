@@ -110,11 +110,7 @@ public class Request {
                 }
                 String responseStr = response.body();
 
-                if (ChatBridge.isDebug()) {
-                    System.out.println(this.getId() + " has completed - " + responseStr);
-                } else {
-                    System.out.println("\u001B[33m" + this.getId() + "\u001B[0m completed");
-                }
+                System.out.println("\u001B[33m" + this.getId() + "\u001B[0m completed");
 
                 Response data;
                 try {

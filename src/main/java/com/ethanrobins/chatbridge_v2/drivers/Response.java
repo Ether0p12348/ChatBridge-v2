@@ -162,6 +162,8 @@ public class Response {
             T getExplicit();
             @JsonIgnore
             T getSafe();
+            @JsonIgnore
+            T getBySafetyLevel(@NotNull SafetyLevel safetyLevel);
         }
 
         @Getter
@@ -178,6 +180,16 @@ public class Response {
                 this.explicit = explicit;
                 this.safe = safe;
             }
+
+            @JsonIgnore
+            @Override
+            public String getBySafetyLevel(@NotNull SafetyLevel safetyLevel) {
+                if (safetyLevel == SafetyLevel.EXPLICIT) {
+                    return this.explicit;
+                }
+
+                return this.safe;
+            }
         }
 
         @Getter
@@ -193,6 +205,16 @@ public class Response {
                 super(tag, lang);
                 this.explicit = explicit;
                 this.safe = safe;
+            }
+
+            @JsonIgnore
+            @Override
+            public EmbedContent getBySafetyLevel(@NotNull SafetyLevel safetyLevel) {
+                if (safetyLevel == SafetyLevel.EXPLICIT) {
+                    return this.explicit;
+                }
+
+                return this.safe;
             }
         }
 

@@ -17,6 +17,7 @@ import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import net.dv8tion.jda.api.interactions.DiscordLocale;
 import net.dv8tion.jda.api.interactions.InteractionHook;
+import net.dv8tion.jda.api.utils.messages.MessageEditBuilder;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -25,13 +26,12 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
-// TODO: Add translations to link embeds
+// TODO: (maybe) Add translations for link embeds
 public class MessageInteraction extends ListenerAdapter {
     @Override
     public void onMessageContextInteraction(@NotNull MessageContextInteractionEvent e) {
         super.onMessageContextInteraction(e);
 
-        // save the user in database with their locale
         CompletableFuture.runAsync(() -> {
             MySQL mysql = null;
             try {
@@ -65,117 +65,134 @@ public class MessageInteraction extends ListenerAdapter {
                 }
                 ex.printStackTrace();
             }
-        });
 
+            switch (e.getName()) {
+                case "report":
+                    e.deferReply().setEphemeral(true).queue();
 
-        switch (e.getName()) {
-            case "report":
-                e.deferReply().setEphemeral(true).queue();
+                    if (e.getTarget().getAuthor().isBot() && e.getTarget().getAuthor().getId().equals(ChatBridge.getSecret().get("discord", "userId"))) {
+                        e.getHook().editOriginal("This function has not been implemented yet!").queue();
+                    } else {
+                        String msg = switch (e.getUserLocale()) {
+                            case DiscordLocale.BULGARIAN -> "Това съобщение не може да бъде докладвано — не е изпратено от ChatBridge. Изберете отговор от ChatBridge и опитайте отново.";
+                            case DiscordLocale.CHINESE_CHINA -> "无法举报此消息 — 它不是由 ChatBridge 发送的。请选择一条 ChatBridge 的回复，然后重试。";
+                            case DiscordLocale.CHINESE_TAIWAN -> "無法檢舉此訊息 — 這不是由 ChatBridge 發送的。請選擇一則 ChatBridge 的回覆，然後再試一次。";
+                            case DiscordLocale.CROATIAN -> "Ne možete prijaviti ovu poruku — nije je poslao ChatBridge. Odaberite odgovor ChatBridgea i pokušajte ponovno.";
+                            case DiscordLocale.CZECH -> "Tuto zprávu nelze nahlásit — neposlal ji ChatBridge. Vyberte odpověď od ChatBridgeu a zkuste to znovu.";
+                            case DiscordLocale.DANISH -> "Du kan ikke anmelde denne besked — den er ikke sendt af ChatBridge. Vælg et svar fra ChatBridge, og prøv igen.";
+                            case DiscordLocale.DUTCH -> "Je kunt dit bericht niet melden — het is niet door ChatBridge verzonden. Selecteer een ChatBridge-reactie en probeer het opnieuw.";
+//                            case DiscordLocale.ENGLISH_UK -> "Can’t report this message — it wasn’t sent by ChatBridge. Select a ChatBridge reply and try again.";
+//                            case DiscordLocale.ENGLISH_US -> "Can’t report this message — it wasn’t sent by ChatBridge. Select a ChatBridge reply and try again.";
+                            case DiscordLocale.FINNISH -> "Tätä viestiä ei voi ilmoittaa — ChatBridge ei lähettänyt sitä. Valitse ChatBridge-vastaus ja yritä uudelleen.";
+                            case DiscordLocale.FRENCH -> "Impossible de signaler ce message — il n’a pas été envoyé par ChatBridge. Sélectionnez une réponse de ChatBridge et réessayez.";
+                            case DiscordLocale.GERMAN -> "Diese Nachricht kann nicht gemeldet werden — sie wurde nicht von ChatBridge gesendet. Wähle eine ChatBridge-Antwort und versuche es erneut.";
+                            case DiscordLocale.GREEK -> "Δεν γίνεται να αναφέρεις αυτό το μήνυμα — δεν στάλθηκε από το ChatBridge. Επίλεξε μια απάντηση του ChatBridge και δοκίμασε ξανά.";
+                            case DiscordLocale.HINDI -> "इस संदेश की रिपोर्ट नहीं की जा सकती — यह ChatBridge द्वारा नहीं भेजा गया था। कृपया ChatBridge का कोई जवाब चुनें और फिर से प्रयास करें.";
+                            case DiscordLocale.HUNGARIAN -> "Ezt az üzenetet nem lehet jelenteni — nem a ChatBridge küldte. Válassz egy ChatBridge-választ, és próbáld újra.";
+                            case DiscordLocale.INDONESIAN -> "Tidak dapat melaporkan pesan ini — pesan ini tidak dikirim oleh ChatBridge. Pilih balasan dari ChatBridge lalu coba lagi.";
+                            case DiscordLocale.ITALIAN -> "Impossibile segnalare questo messaggio — non è stato inviato da ChatBridge. Seleziona una risposta di ChatBridge e riprova.";
+                            case DiscordLocale.JAPANESE -> "このメッセージは報告できません — ChatBridge から送信されたものではありません。ChatBridge の返信を選んで、もう一度お試しください。";
+                            case DiscordLocale.KOREAN -> "이 메시지는 신고할 수 없습니다 — ChatBridge에서 보낸 것이 아닙니다. ChatBridge의 답장을 선택하고 다시 시도하세요.";
+                            case DiscordLocale.LITHUANIAN -> "Negalite pranešti apie šią žinutę — ją neišsiuntė „ChatBridge“. Pasirinkite „ChatBridge“ atsakymą ir bandykite dar kartą.";
+                            case DiscordLocale.NORWEGIAN -> "Du kan ikke rapportere denne meldingen — den ble ikke sendt av ChatBridge. Velg et ChatBridge-svar og prøv igjen.";
+                            case DiscordLocale.POLISH -> "Nie można zgłosić tej wiadomości — nie została wysłana przez ChatBridge. Wybierz odpowiedź od ChatBridge i spróbuj ponownie.";
+                            case DiscordLocale.PORTUGUESE_BRAZILIAN -> "Não é possível denunciar esta mensagem — ela não foi enviada pelo ChatBridge. Selecione uma resposta do ChatBridge e tente novamente.";
+                            case DiscordLocale.ROMANIAN_ROMANIA -> "Nu poți raporta acest mesaj — nu a fost trimis de ChatBridge. Selectează un răspuns de la ChatBridge și încearcă din nou.";
+                            case DiscordLocale.RUSSIAN -> "Вы не можете пожаловаться на это сообщение — его не отправлял ChatBridge. Выберите ответ от ChatBridge и попробуйте ещё раз.";
+                            case DiscordLocale.SPANISH -> "No puedes denunciar este mensaje — no fue enviado por ChatBridge. Selecciona una respuesta de ChatBridge y vuelve a intentarlo.";
+                            case DiscordLocale.SPANISH_LATAM -> "No puedes reportar este mensaje — no fue enviado por ChatBridge. Selecciona una respuesta de ChatBridge y vuelve a intentarlo.";
+                            case DiscordLocale.SWEDISH -> "Du kan inte anmäla det här meddelandet — det skickades inte av ChatBridge. Välj ett svar från ChatBridge och försök igen.";
+                            case DiscordLocale.THAI -> "ไม่สามารถรายงานข้อความนี้ได้ — ข้อความนี้ไม่ได้ส่งโดย ChatBridge โปรดเลือกการตอบกลับของ ChatBridge แล้วลองอีกครั้ง";
+                            case DiscordLocale.TURKISH -> "Bu mesaj bildirilemez — ChatBridge tarafından gönderilmedi. Bir ChatBridge yanıtı seçip tekrar deneyin.";
+                            case DiscordLocale.UKRAINIAN -> "Не можна поскаржитися на це повідомлення — його не надсилав ChatBridge. Виберіть відповідь від ChatBridge і спробуйте ще раз.";
+                            case DiscordLocale.VIETNAMESE -> "Không thể báo cáo tin nhắn này — tin nhắn không do ChatBridge gửi. Hãy chọn một phản hồi của ChatBridge rồi thử lại.";
+                            default -> "Can’t report this message — it wasn’t sent by ChatBridge. Select a ChatBridge reply and try again.";
+                        };
 
-                if (e.getTarget().getAuthor().isBot() && e.getTarget().getAuthor().getId().equals(ChatBridge.getSecret().get("discord", "userId"))) {
-                    e.getHook().editOriginal("This function has not been implemented yet!").queue();
-                } else {
+                        e.getHook().editOriginal(msg).queue();
+                    }
+                    break;
+                case "priv-translate-dev":
+                case "pub-translate-dev":
+                case "priv-translate":
+                case "pub-translate":
+                    boolean isPublic = e.getName().equals("pub-translate") || e.getName().equals("pub-translate-dev");
+                    Member member = e.getMember();
+                    if (member != null && isPublic && e.getGuild() != null && !e.getMember().hasPermission(e.getGuildChannel(), Permission.MESSAGE_SEND)) {
+                        isPublic = false;
+                    }
+
+                    e.deferReply().setEphemeral(!isPublic).queue();
+
+                    translateMessageAsync(!isPublic, e);
+
+                    break;
+                default:
                     String msg = switch (e.getUserLocale()) {
-                        case DiscordLocale.BULGARIAN -> "Това съобщение не може да бъде докладвано — не е изпратено от ChatBridge. Изберете отговор от ChatBridge и опитайте отново.";
-                        case DiscordLocale.CHINESE_CHINA -> "无法举报此消息 — 它不是由 ChatBridge 发送的。请选择一条 ChatBridge 的回复，然后重试。";
-                        case DiscordLocale.CHINESE_TAIWAN -> "無法檢舉此訊息 — 這不是由 ChatBridge 發送的。請選擇一則 ChatBridge 的回覆，然後再試一次。";
-                        case DiscordLocale.CROATIAN -> "Ne možete prijaviti ovu poruku — nije je poslao ChatBridge. Odaberite odgovor ChatBridgea i pokušajte ponovno.";
-                        case DiscordLocale.CZECH -> "Tuto zprávu nelze nahlásit — neposlal ji ChatBridge. Vyberte odpověď od ChatBridgeu a zkuste to znovu.";
-                        case DiscordLocale.DANISH -> "Du kan ikke anmelde denne besked — den er ikke sendt af ChatBridge. Vælg et svar fra ChatBridge, og prøv igen.";
-                        case DiscordLocale.DUTCH -> "Je kunt dit bericht niet melden — het is niet door ChatBridge verzonden. Selecteer een ChatBridge-reactie en probeer het opnieuw.";
-//                        case DiscordLocale.ENGLISH_UK -> "Can’t report this message — it wasn’t sent by ChatBridge. Select a ChatBridge reply and try again.";
-//                        case DiscordLocale.ENGLISH_US -> "Can’t report this message — it wasn’t sent by ChatBridge. Select a ChatBridge reply and try again.";
-                        case DiscordLocale.FINNISH -> "Tätä viestiä ei voi ilmoittaa — ChatBridge ei lähettänyt sitä. Valitse ChatBridge-vastaus ja yritä uudelleen.";
-                        case DiscordLocale.FRENCH -> "Impossible de signaler ce message — il n’a pas été envoyé par ChatBridge. Sélectionnez une réponse de ChatBridge et réessayez.";
-                        case DiscordLocale.GERMAN -> "Diese Nachricht kann nicht gemeldet werden — sie wurde nicht von ChatBridge gesendet. Wähle eine ChatBridge-Antwort und versuche es erneut.";
-                        case DiscordLocale.GREEK -> "Δεν γίνεται να αναφέρεις αυτό το μήνυμα — δεν στάλθηκε από το ChatBridge. Επίλεξε μια απάντηση του ChatBridge και δοκίμασε ξανά.";
-                        case DiscordLocale.HINDI -> "इस संदेश की रिपोर्ट नहीं की जा सकती — यह ChatBridge द्वारा नहीं भेजा गया था। कृपया ChatBridge का कोई जवाब चुनें और फिर से प्रयास करें.";
-                        case DiscordLocale.HUNGARIAN -> "Ezt az üzenetet nem lehet jelenteni — nem a ChatBridge küldte. Válassz egy ChatBridge-választ, és próbáld újra.";
-                        case DiscordLocale.INDONESIAN -> "Tidak dapat melaporkan pesan ini — pesan ini tidak dikirim oleh ChatBridge. Pilih balasan dari ChatBridge lalu coba lagi.";
-                        case DiscordLocale.ITALIAN -> "Impossibile segnalare questo messaggio — non è stato inviato da ChatBridge. Seleziona una risposta di ChatBridge e riprova.";
-                        case DiscordLocale.JAPANESE -> "このメッセージは報告できません — ChatBridge から送信されたものではありません。ChatBridge の返信を選んで、もう一度お試しください。";
-                        case DiscordLocale.KOREAN -> "이 메시지는 신고할 수 없습니다 — ChatBridge에서 보낸 것이 아닙니다. ChatBridge의 답장을 선택하고 다시 시도하세요.";
-                        case DiscordLocale.LITHUANIAN -> "Negalite pranešti apie šią žinutę — ją neišsiuntė „ChatBridge“. Pasirinkite „ChatBridge“ atsakymą ir bandykite dar kartą.";
-                        case DiscordLocale.NORWEGIAN -> "Du kan ikke rapportere denne meldingen — den ble ikke sendt av ChatBridge. Velg et ChatBridge-svar og prøv igjen.";
-                        case DiscordLocale.POLISH -> "Nie można zgłosić tej wiadomości — nie została wysłana przez ChatBridge. Wybierz odpowiedź od ChatBridge i spróbuj ponownie.";
-                        case DiscordLocale.PORTUGUESE_BRAZILIAN -> "Não é possível denunciar esta mensagem — ela não foi enviada pelo ChatBridge. Selecione uma resposta do ChatBridge e tente novamente.";
-                        case DiscordLocale.ROMANIAN_ROMANIA -> "Nu poți raporta acest mesaj — nu a fost trimis de ChatBridge. Selectează un răspuns de la ChatBridge și încearcă din nou.";
-                        case DiscordLocale.RUSSIAN -> "Вы не можете пожаловаться на это сообщение — его не отправлял ChatBridge. Выберите ответ от ChatBridge и попробуйте ещё раз.";
-                        case DiscordLocale.SPANISH -> "No puedes denunciar este mensaje — no fue enviado por ChatBridge. Selecciona una respuesta de ChatBridge y vuelve a intentarlo.";
-                        case DiscordLocale.SPANISH_LATAM -> "No puedes reportar este mensaje — no fue enviado por ChatBridge. Selecciona una respuesta de ChatBridge y vuelve a intentarlo.";
-                        case DiscordLocale.SWEDISH -> "Du kan inte anmäla det här meddelandet — det skickades inte av ChatBridge. Välj ett svar från ChatBridge och försök igen.";
-                        case DiscordLocale.THAI -> "ไม่สามารถรายงานข้อความนี้ได้ — ข้อความนี้ไม่ได้ส่งโดย ChatBridge โปรดเลือกการตอบกลับของ ChatBridge แล้วลองอีกครั้ง";
-                        case DiscordLocale.TURKISH -> "Bu mesaj bildirilemez — ChatBridge tarafından gönderilmedi. Bir ChatBridge yanıtı seçip tekrar deneyin.";
-                        case DiscordLocale.UKRAINIAN -> "Не можна поскаржитися на це повідомлення — його не надсилав ChatBridge. Виберіть відповідь від ChatBridge і спробуйте ще раз.";
-                        case DiscordLocale.VIETNAMESE -> "Không thể báo cáo tin nhắn này — tin nhắn không do ChatBridge gửi. Hãy chọn một phản hồi của ChatBridge rồi thử lại.";
-                        default -> "Can’t report this message — it wasn’t sent by ChatBridge. Select a ChatBridge reply and try again.";
+                        case DiscordLocale.BULGARIAN -> "Това взаимодействие беше премахнато от разработчика";
+                        case DiscordLocale.CHINESE_CHINA -> "此交互已被开发者移除";
+                        case DiscordLocale.CHINESE_TAIWAN -> "此互動已被開發者移除";
+                        case DiscordLocale.CROATIAN -> "Ovu interakciju je uklonio programer";
+                        case DiscordLocale.CZECH -> "Tato interakce byla vývojářem odstraněna";
+                        case DiscordLocale.DANISH -> "Denne interaktion er blevet fjernet af udvikleren";
+                        case DiscordLocale.DUTCH -> "Deze interactie is door de ontwikkelaar verwijderd";
+//                        case DiscordLocale.ENGLISH_UK -> "This interaction has been removed by the developer";
+//                        case DiscordLocale.ENGLISH_US -> "This interaction has been removed by the developer";
+                        case DiscordLocale.FINNISH -> "Tämä vuorovaikutus on poistettu kehittäjän toimesta";
+                        case DiscordLocale.FRENCH -> "Cette interaction a été supprimée par le développeur";
+                        case DiscordLocale.GERMAN -> "Diese Interaktion wurde vom Entwickler entfernt";
+                        case DiscordLocale.GREEK -> "Αυτή η αλληλεπίδραση έχει αφαιρεθεί από τον προγραμματιστή";
+                        case DiscordLocale.HINDI -> "इस इंटरैक्शन को डेवलपर द्वारा हटा दिया गया है";
+                        case DiscordLocale.HUNGARIAN -> "Ezt az interakciót a fejlesztő eltávolította";
+                        case DiscordLocale.INDONESIAN -> "Interaksi ini telah dihapus oleh pengembang";
+                        case DiscordLocale.ITALIAN -> "Questa interazione è stata rimossa dallo sviluppatore";
+                        case DiscordLocale.JAPANESE -> "このインタラクションは開発者によって削除されました";
+                        case DiscordLocale.KOREAN -> "이 상호작용은 개발자에 의해 제거되었습니다";
+                        case DiscordLocale.LITHUANIAN -> "Šią sąveiką pašalino kūrėjas";
+                        case DiscordLocale.NORWEGIAN -> "Denne interaksjonen har blitt fjernet av utvikleren";
+                        case DiscordLocale.POLISH -> "Ta interakcja została usunięta przez programistę";
+                        case DiscordLocale.PORTUGUESE_BRAZILIAN -> "Esta interação foi removida pelo desenvolvedor";
+                        case DiscordLocale.ROMANIAN_ROMANIA -> "Această interacțiune a fost eliminată de către dezvoltator";
+                        case DiscordLocale.RUSSIAN -> "Это взаимодействие было удалено разработчиком";
+                        case DiscordLocale.SPANISH -> "Esta interacción ha sido eliminada por el desarrollador";
+                        case DiscordLocale.SPANISH_LATAM -> "Esta interacción ha sido eliminada por el desarrollador";
+                        case DiscordLocale.SWEDISH -> "Den här interaktionen har tagits bort av utvecklaren";
+                        case DiscordLocale.THAI -> "การโต้ตอบนี้ถูกลบโดยนักพัฒนา";
+                        case DiscordLocale.TURKISH -> "Bu etkileşim geliştirici tarafından kaldırıldı";
+                        case DiscordLocale.UKRAINIAN -> "Цю взаємодію було видалено розробником";
+                        case DiscordLocale.VIETNAMESE -> "Tương tác này đã bị nhà phát triển gỡ bỏ";
+                        default -> "This interaction has been removed by the developer";
                     };
 
-                    e.getHook().editOriginal(msg).queue();
-                }
-                break;
-            case "priv-translate-dev":
-            case "pub-translate-dev":
-            case "priv-translate":
-            case "pub-translate":
-                boolean isPublic = e.getName().equals("pub-translate") || e.getName().equals("pub-translate-dev");
-                Member member = e.getMember();
-                if (member != null && isPublic && e.getGuild() != null && !e.getMember().hasPermission(e.getGuildChannel(), Permission.MESSAGE_SEND)) {
-                    isPublic = false;
-                }
-
-                e.deferReply().setEphemeral(!isPublic).queue();
-
-                translateMessageAsync(e);
-
-                break;
-            default:
-                String msg = switch (e.getUserLocale()) {
-                    case DiscordLocale.BULGARIAN -> "Това взаимодействие беше премахнато от разработчика";
-                    case DiscordLocale.CHINESE_CHINA -> "此交互已被开发者移除";
-                    case DiscordLocale.CHINESE_TAIWAN -> "此互動已被開發者移除";
-                    case DiscordLocale.CROATIAN -> "Ovu interakciju je uklonio programer";
-                    case DiscordLocale.CZECH -> "Tato interakce byla vývojářem odstraněna";
-                    case DiscordLocale.DANISH -> "Denne interaktion er blevet fjernet af udvikleren";
-                    case DiscordLocale.DUTCH -> "Deze interactie is door de ontwikkelaar verwijderd";
-//                    case DiscordLocale.ENGLISH_UK -> "This interaction has been removed by the developer";
-//                    case DiscordLocale.ENGLISH_US -> "This interaction has been removed by the developer";
-                    case DiscordLocale.FINNISH -> "Tämä vuorovaikutus on poistettu kehittäjän toimesta";
-                    case DiscordLocale.FRENCH -> "Cette interaction a été supprimée par le développeur";
-                    case DiscordLocale.GERMAN -> "Diese Interaktion wurde vom Entwickler entfernt";
-                    case DiscordLocale.GREEK -> "Αυτή η αλληλεπίδραση έχει αφαιρεθεί από τον προγραμματιστή";
-                    case DiscordLocale.HINDI -> "इस इंटरैक्शन को डेवलपर द्वारा हटा दिया गया है";
-                    case DiscordLocale.HUNGARIAN -> "Ezt az interakciót a fejlesztő eltávolította";
-                    case DiscordLocale.INDONESIAN -> "Interaksi ini telah dihapus oleh pengembang";
-                    case DiscordLocale.ITALIAN -> "Questa interazione è stata rimossa dallo sviluppatore";
-                    case DiscordLocale.JAPANESE -> "このインタラクションは開発者によって削除されました";
-                    case DiscordLocale.KOREAN -> "이 상호작용은 개발자에 의해 제거되었습니다";
-                    case DiscordLocale.LITHUANIAN -> "Šią sąveiką pašalino kūrėjas";
-                    case DiscordLocale.NORWEGIAN -> "Denne interaksjonen har blitt fjernet av utvikleren";
-                    case DiscordLocale.POLISH -> "Ta interakcja została usunięta przez programistę";
-                    case DiscordLocale.PORTUGUESE_BRAZILIAN -> "Esta interação foi removida pelo desenvolvedor";
-                    case DiscordLocale.ROMANIAN_ROMANIA -> "Această interacțiune a fost eliminată de către dezvoltator";
-                    case DiscordLocale.RUSSIAN -> "Это взаимодействие было удалено разработчиком";
-                    case DiscordLocale.SPANISH -> "Esta interacción ha sido eliminada por el desarrollador";
-                    case DiscordLocale.SPANISH_LATAM -> "Esta interacción ha sido eliminada por el desarrollador";
-                    case DiscordLocale.SWEDISH -> "Den här interaktionen har tagits bort av utvecklaren";
-                    case DiscordLocale.THAI -> "การโต้ตอบนี้ถูกลบโดยนักพัฒนา";
-                    case DiscordLocale.TURKISH -> "Bu etkileşim geliştirici tarafından kaldırıldı";
-                    case DiscordLocale.UKRAINIAN -> "Цю взаємодію було видалено розробником";
-                    case DiscordLocale.VIETNAMESE -> "Tương tác này đã bị nhà phát triển gỡ bỏ";
-                    default -> "This interaction has been removed by the developer";
-                };
-
-                e.reply(msg).setEphemeral(true).queue();
-                break;
-        }
+                    e.reply(msg).setEphemeral(true).queue();
+                    break;
+            }
+        });
     }
 
-    public void translateMessageAsync(@NotNull MessageContextInteractionEvent event) {
+    // Two asynchronous methods may be much. SUBJECT TO CHANGE
+    public void translateMessageAsync(boolean isPrivate, @NotNull MessageContextInteractionEvent event) {
         CompletableFuture.runAsync(() -> {
             try {
                 List<MessageEmbed> embeds = new ArrayList<>(event.getTarget().getEmbeds());
                 embeds.removeIf(embed -> embed.getType() != EmbedType.RICH);
+                
+                SafetyLevel safetyLevel;
+                if (isPrivate) {
+                    MySQL sql = new MySQL();
+                    safetyLevel = sql.getSafetyLevel(true, event.getUser().getId());
+                    sql.close();
+                } else {
+                    if (event.isFromGuild()) {
+                        MySQL sql = new MySQL();
+                        safetyLevel = sql.getSafetyLevel(false, Objects.requireNonNull(event.getGuild()).getId());
+                        sql.close();
+                    } else {
+                        MySQL sql = new MySQL();
+                        safetyLevel = sql.getSafetyLevel(true, event.getUser().getId());
+                        sql.close();
+                    }
+                }
 
                 if (embeds.isEmpty()) {
                     final ReplyGroup rg = new ReplyGroup(event);
@@ -186,7 +203,7 @@ public class MessageInteraction extends ListenerAdapter {
 
                         if (responseData.getTarget() instanceof Response.Data.MessageTarget tgt) {
                             Response.Data.Source src = responseData.getSource();
-                            rg.setMessage(getCaption(event.getTarget().getJumpUrl(), src, tgt, tgt.getExplicit()));
+                            rg.setMessage(getCaption(event.getTarget().getJumpUrl(), src, tgt, tgt.getBySafetyLevel(safetyLevel)));
                         } else {
                             System.err.println("Unexpected target type: " + responseData.getTarget().getClass().getName());
                         }
@@ -208,14 +225,14 @@ public class MessageInteraction extends ListenerAdapter {
                             Response.Data responseData = Objects.requireNonNull(Objects.requireNonNull(response.getOutput()).getContent()).getData();
                             if (responseData.getTarget() instanceof Response.Data.EmbedTarget tgt) {
                                 Response.Data.Source src = responseData.getSource();
-                                e.setTitle(tgt.getExplicit().getTitle());
-                                e.setAuthor(tgt.getExplicit().getAuthor(), origEmbed.getAuthor() != null ? origEmbed.getAuthor().getUrl() : null, origEmbed.getAuthor() != null ? origEmbed.getAuthor().getIconUrl() : null);
-                                e.setDescription(tgt.getExplicit().getDescription());
-                                e.setFooter(tgt.getExplicit().getFooter(), origEmbed.getFooter() != null ? origEmbed.getFooter().getIconUrl() : null);
+                                e.setTitle(tgt.getBySafetyLevel(safetyLevel).getTitle());
+                                e.setAuthor(tgt.getBySafetyLevel(safetyLevel).getAuthor(), origEmbed.getAuthor() != null ? origEmbed.getAuthor().getUrl() : null, origEmbed.getAuthor() != null ? origEmbed.getAuthor().getIconUrl() : null);
+                                e.setDescription(tgt.getBySafetyLevel(safetyLevel).getDescription());
+                                e.setFooter(tgt.getBySafetyLevel(safetyLevel).getFooter(), origEmbed.getFooter() != null ? origEmbed.getFooter().getIconUrl() : null);
                                 e.clearFields();
-                                if (tgt.getExplicit().getFields() != null && !tgt.getExplicit().getFields().isEmpty()) {
-                                    for (int i = 0; i < tgt.getExplicit().getFields().size(); i++) {
-                                        Response.Data.EmbedContent.Field f = tgt.getExplicit().getFields().get(i);
+                                if (tgt.getBySafetyLevel(safetyLevel).getFields() != null && !tgt.getBySafetyLevel(safetyLevel).getFields().isEmpty()) {
+                                    for (int i = 0; i < tgt.getBySafetyLevel(safetyLevel).getFields().size(); i++) {
+                                        Response.Data.EmbedContent.Field f = tgt.getBySafetyLevel(safetyLevel).getFields().get(i);
                                         if (f == null) continue;
                                         String name = f.getName();
                                         if (name == null) name = "";
@@ -226,8 +243,10 @@ public class MessageInteraction extends ListenerAdapter {
                                     }
                                 }
 
-                                if (tgt.getExplicit().getMessage() != null) {
-                                    rg.setMessage(getCaption(event.getTarget().getJumpUrl(), src, tgt, tgt.getExplicit().getMessage()));
+                                if (tgt.getBySafetyLevel(safetyLevel).getMessage() != null) {
+                                    rg.setMessage(getCaption(event.getTarget().getJumpUrl(), src, tgt, tgt.getBySafetyLevel(safetyLevel).getMessage()));
+                                } else {
+                                    rg.setMessage(getCaption(event.getTarget().getJumpUrl(), src, tgt, null));
                                 }
                                 rg.addEmbed(e.build());
                             } else {
@@ -289,14 +308,14 @@ public class MessageInteraction extends ListenerAdapter {
         return new EndUserError(ex, localeMessages);
     }
 
-    public static String getCaption(String jumpUrl, Response.Data.Source src, Response.Data.Target<?> tgt, String msg) {
-        return "%jumpUrl%: **(%srcTag%) %srcLang% → (%tgtTag%) %tgtLang%**\n%message%"
-                .replace("%jumpUrl%", jumpUrl)
+    public static String getCaption(@Nullable String jumpUrl, @NotNull Response.Data.Source src, @NotNull Response.Data.Target<?> tgt, @Nullable String msg) {
+        return "%jumpUrl%**(%srcTag%) %srcLang% → (%tgtTag%) %tgtLang%**%message%"
+                .replace("%jumpUrl%", jumpUrl != null ? jumpUrl + ": " : "")
                 .replace("%srcTag%", src.getTag())
                 .replace("%srcLang%", src.getLang())
                 .replace("%tgtTag%", tgt.getTag())
                 .replace("%tgtLang%", tgt.getLang())
-                .replace("%message%", msg);
+                .replace("%message%", msg != null ? "\n" + msg : "");
     }
 
     @Getter
@@ -342,8 +361,13 @@ public class MessageInteraction extends ListenerAdapter {
 
         public void complete() {
             InteractionHook hook = this.event.getHook();
-            if (this.message != null) hook.editOriginal(this.message).queue();
-            if (!this.embeds.isEmpty()) hook.editOriginalEmbeds(this.embeds).queue();
+
+            MessageEditBuilder mb = new MessageEditBuilder();
+
+            mb.setContent(this.message);
+            mb.setEmbeds(this.embeds.size() > 10 ? this.embeds.subList(0, 10) : this.embeds);
+
+            if (this.message != null || !this.embeds.isEmpty()) hook.editOriginal(mb.build()).queue();
         }
     }
 }

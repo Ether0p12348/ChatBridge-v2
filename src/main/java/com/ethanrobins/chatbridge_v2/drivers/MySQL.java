@@ -128,6 +128,9 @@ public class MySQL {
         if (!this.status.isClosed()) {
             MySQL.close(this.conn);
             this.status.setStatus(State.CLOSED);
+            if (ChatBridge.isDebug()) {
+                System.out.println(this.status.toString());
+            }
         }
     }
 
@@ -163,140 +166,73 @@ public class MySQL {
         }
     }
 
+    // --- HELPERS ---
+
+    @Nullable
+    public ResultSet getUser(@NotNull String id) {
+        if (!this.status.isConnected()) return null;
+
+        if (ChatBridge.isDebug()) {
+            System.out.println("Getting user data...");
+        }
+
+        try {
+            PreparedStatement stmt = this.conn.prepareStatement(
+                    "SELECT * FROM chatbridge_userstore WHERE id = ?",
+                    ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY
+            );
+            stmt.setString(1, id);
+            ResultSet rs = stmt.executeQuery();
+
+            if (!rs.isBeforeFirst()) {
+                rs.close();
+                stmt.close();
+                this.status.setFailed(new SQLException("Unable to find user with id " + id));
+                return null;
+            }
+
+            this.status.setStatus(State.SUCCESS);
+            return rs;
+        } catch (SQLException ex) {
+            this.status.setFailed(ex);
+            return null;
+        }
+    }
+    @Nullable
+    public ResultSet getGuild(@NotNull String id) {
+        if (!this.status.isConnected()) return null;
+
+        if (ChatBridge.isDebug()) {
+            System.out.println("Getting guild data...");
+        }
+
+        try {
+            PreparedStatement stmt = this.conn.prepareStatement(
+                    "SELECT * FROM chatbridge_guildstore WHERE id = ?",
+                    ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY
+            );
+            stmt.setString(1, id);
+            ResultSet rs = stmt.executeQuery();
+
+            if (!rs.isBeforeFirst()) {
+                rs.close();
+                stmt.close();
+                return null;
+            }
+
+            this.status.setStatus(State.SUCCESS);
+            return rs;
+        } catch (SQLException ex) {
+            this.status.setFailed(ex);
+            return null;
+        }
+    }
+
     /**
-     * Retrieves the locale set for the specified user.
-     * <p>
-     * This method attempts to retrieve the {@link DiscordLocale} associated with the given user's Discord ID.
-     * If no locale is set, or if an error occurs during retrieval, it defaults to {@link DiscordLocale#ENGLISH_US}.
-     * </p>
-     *
-     * @param userId The Discord User ID of the user whose locale is being retrieved.
-     * @return The {@link DiscordLocale} of the user's set locale,
-     *         defaulting to {@link DiscordLocale#ENGLISH_US} in case of null or error.
+     * Outdated
      */
     @NotNull
-    public DiscordLocale getLocale(@NotNull String userId) {
-        try {
-            DiscordLocale locale = getLocale(userId, false);
-            return Objects.requireNonNullElse(locale, DiscordLocale.ENGLISH_US);
-        } catch (SQLException ex) {
-            ex.printStackTrace();
-            return DiscordLocale.ENGLISH_US;
-        }
-    }
-
-    /**
-     * Retrieves the locale set for the specified user with customizable fallback behavior.
-     * <p>
-     * This method queries the user's locale from the database based on their Discord User ID. If the locale retrieved is
-     * {@link DiscordLocale#UNKNOWN}, it defaults to {@link DiscordLocale#ENGLISH_US}. Additionally, the behavior in cases
-     * of missing rows or errors can be controlled using the {@code returnIfNotExists} parameter.
-     * </p>
-     *
-     * @param userId            The Discord User ID of the user whose locale is being retrieved.
-     * @param returnNullIfNotExists If {@code true}, the method returns {@code null} if no locale is found or rows are missing.
-     *                          Otherwise, an {@link SQLException} is thrown in such cases.
-     * @return The {@link DiscordLocale} of the user's set locale, or {@code null} if {@code returnIfNotExists} is {@code true}
-     *         and no locale is found. Defaults to {@link DiscordLocale#ENGLISH_US} if the locale is {@link DiscordLocale#UNKNOWN}.
-     * @throws SQLException If an error occurs during query execution and {@code returnIfNotExists} is {@code false}.
-     */
-    @Nullable
-    public DiscordLocale getLocale(@NotNull String userId, boolean returnNullIfNotExists) throws SQLException {
-        if (this.status.isConnected()) {
-            try {
-                PreparedStatement stmt = this.conn.prepareStatement("SELECT locale FROM chatbridge_userstore WHERE user_id=?");
-                stmt.setString(1, userId);
-                ResultSet result = stmt.executeQuery();
-                DiscordLocale locale = DiscordLocale.from(result.getString("locale"));
-
-                if (!returnNullIfNotExists && locale == DiscordLocale.UNKNOWN) {
-                    this.status.setFailed(new SQLException("Locale is unknown!"));
-                    locale = DiscordLocale.ENGLISH_US;
-                } else {
-                    this.status.setStatus(State.SUCCESS);
-                }
-
-                return locale;
-            } catch (SQLException ex) {
-                if (returnNullIfNotExists) {
-                    this.status.setStatus(State.SUCCESS);
-                    return null;
-                } else {
-                    this.status.setFailed(ex);
-                    return DiscordLocale.ENGLISH_US;
-                }
-            }
-        } else {
-            if (returnNullIfNotExists) {
-                if (ChatBridge.isDev()) {
-                    this.status.setStatus(State.INSERTED);
-                }
-                return null;
-            } else {
-                if (ChatBridge.isDev()) {
-                    this.status.setStatus(State.INSERTED);
-                }
-                return DiscordLocale.ENGLISH_US;
-            }
-        }
-    }
-
-    /**
-     * Inserts or updates the locale for the specified user by locale tag.
-     * <p>
-     * This method updates the user's locale in the database using a locale tag (e.g., "en_US") and
-     * delegates the operation to {@link #updateLocale(String, DiscordLocale)} after converting the tag
-     * to a {@link DiscordLocale}. If the user already has a locale entry, it will be updated; otherwise,
-     * a new entry will be created.
-     * </p>
-     *
-     * @param userId The Discord User ID of the user whose locale is being updated or set.
-     * @param locale The locale tag (string) of the {@link DiscordLocale} to be inserted or updated.
-     * @return A {@link Status} object representing the result of the operation:
-     *         {@link State#UPDATED} if an existing entry was updated, {@link State#INSERTED} for new entries,
-     *         or a failed status if an error occurs.
-     */
-    public Status updateLocale(@NotNull String userId, @NotNull String locale) {
-        return updateLocale(userId, DiscordLocale.from(locale));
-    }
-
-    /**
-     * Inserts or updates the locale for the specified user.
-     * <p>
-     * This method updates the user's locale in the database using a {@link DiscordLocale} object. If the
-     * user already has an entry in the database, the locale is updated to the provided value. Otherwise,
-     * a new entry is created. The operation utilizes an "INSERT ON DUPLICATE KEY UPDATE" SQL statement for
-     * efficient handling of insert-or-update logic.
-     * </p>
-     *
-     * @param userId The Discord User ID of the user whose locale is being updated or set.
-     * @param locale The {@link DiscordLocale} object to be inserted or updated.
-     * @return A {@link Status} object representing the result of the operation:
-     *         {@link State#UPDATED} if an existing entry was updated, {@link State#INSERTED} for new entries,
-     *         or a failed status if an error occurs.
-     */
-    public Status updateLocale(@NotNull String userId, @NotNull DiscordLocale locale) {
-        if (this.status.isConnected()) {
-            try {
-                Status status = this.status.setStatus(getLocale(userId, true) != null ? State.UPDATED : State.INSERTED);
-
-                PreparedStatement stmt = this.conn.prepareStatement("INSERT INTO chatbridge_userstore (user_id, locale) VALUES (?, ?) ON DUPLICATE KEY UPDATE locale=?");
-                stmt.setString(1, userId);
-                stmt.setString(2, locale.getLocale());
-                stmt.setString(3, locale.getLocale());
-                stmt.executeUpdate();
-
-                return status;
-            } catch (SQLException ex) {
-                ex.printStackTrace();
-                return this.status.setFailed(ex);
-            }
-        } else {
-            return this.status.setStatus(State.INSERTED);
-        }
-    }
-
-    public @NotNull Map<String, Boolean> getGuilds() throws SQLException {
+    public Map<String, Boolean> getGuilds() throws SQLException {
         if (this.status.isConnected()) {
             Map<String, Boolean> guilds = new HashMap<>();
             try {
@@ -326,57 +262,163 @@ public class MySQL {
         throw new SQLException("MySQL is not connected!");
     }
 
-    public @Nullable Boolean getGuildStatus(@NotNull String guildId) {
+    @NotNull
+    public DiscordLocale getLocale(@NotNull String userId) {
+        DiscordLocale locale = getLocale(userId, false);
+        if (locale == DiscordLocale.UNKNOWN) locale = null;
+        return Objects.requireNonNullElse(locale, DiscordLocale.ENGLISH_US);
+    }
+    @Nullable
+    public DiscordLocale getLocale(@NotNull String userId, boolean returnNullIfNotExists) {
         if (this.status.isConnected()) {
             try {
-                PreparedStatement stmt = this.conn.prepareStatement("SELECT `status` FROM chatbridge_guildstore WHERE guild_id=? LIMIT 1");
-                stmt.setString(1, guildId);
-                ResultSet result = stmt.executeQuery();
+                ResultSet rs = this.getUser(userId);
 
-                if (!result.next()) {
-                    this.status.setStatus(State.SUCCESS);
-                    if (ChatBridge.isDebug()) {
-                        System.out.println("Guild status for " + guildId + ": <no row>");
-                    }
-                    return null;
+                DiscordLocale locale = null;
+                if (rs != null) {
+                    locale = DiscordLocale.from(rs.getString("locale"));
                 }
 
-                boolean guildStatus = result.getBoolean("status");
-                if (result.wasNull()) {
-                    this.status.setStatus(State.SUCCESS);
-                    if (ChatBridge.isDebug()) {
-                        System.out.println("Guild status for " + guildId + ": <NULL column>");
-                    }
-                    return null;
+                if (!returnNullIfNotExists && (locale == DiscordLocale.UNKNOWN || locale == null)) {
+                    this.status.setFailed(new SQLException("Locale is unknown!"));
+                    locale = DiscordLocale.ENGLISH_US;
+                    return locale;
                 }
 
                 this.status.setStatus(State.SUCCESS);
-                if (ChatBridge.isDebug()) {
-                    System.out.println("Guild status for " + guildId + ": " + guildStatus);
-                }
-                return guildStatus;
+                return locale != DiscordLocale.UNKNOWN ? locale : null;
             } catch (SQLException ex) {
-                if (ChatBridge.isDev()) {
-                    this.status.setStatus(State.SUCCESS);
+                this.status.setException(ex);
+                return returnNullIfNotExists ? null : DiscordLocale.ENGLISH_US;
+            }
+        }
+
+        return returnNullIfNotExists ? null : DiscordLocale.ENGLISH_US;
+    }
+
+    public Status updateLocale(@NotNull String userId, @NotNull String locale) {
+        return updateLocale(userId, DiscordLocale.from(locale));
+    }
+    public Status updateLocale(@NotNull String userId, @NotNull DiscordLocale locale) {
+        if (this.status.isConnected()) {
+            try {
+                Status status = this.status.setStatus(this.getUser(userId) != null ? State.UPDATED : State.INSERTED);
+
+                PreparedStatement stmt = this.conn.prepareStatement("INSERT INTO chatbridge_userstore (id, locale) VALUES (?, ?) ON DUPLICATE KEY UPDATE locale=?");
+                stmt.setString(1, userId);
+                stmt.setString(2, locale.getLocale());
+                stmt.setString(3, locale.getLocale());
+                stmt.executeUpdate();
+
+                return status;
+            } catch (SQLException ex) {
+                ex.printStackTrace();
+                return this.status.setFailed(ex);
+            }
+        }
+
+        return this.status.setFailed(new SQLException("The connection couldn't be established!"));
+    }
+
+    @NotNull
+    public SafetyLevel getSafetyLevel(boolean isUser, @NotNull String id) {
+        if (this.status.isConnected()) {
+            try {
+                ResultSet rs;
+                if (isUser) {
+                    rs = this.getUser(id);
+                    if (ChatBridge.isDebug()) {
+                        System.out.println("isUser");
+                        System.out.println(rs);
+                    }
                 } else {
-                    this.status.setFailed(ex);
+                    rs = this.getGuild(id);
+                    if (ChatBridge.isDebug()) {
+                        System.out.println("isGuild");
+                        System.out.println(rs);
+                    }
                 }
+
+                SafetyLevel l = SafetyLevel.SAFE;
+                if (rs != null) {
+                    if (!rs.next()) throw new SQLException(rs.getWarnings());
+                    l = SafetyLevel.fromId(rs.getString("safety"));
+                    if (ChatBridge.isDebug()) {
+                        System.out.println(isUser ? "User's safety level set to " + l.getId() : "Guild's safety level set to " + l.getId());
+                    }
+                }
+
+                this.status.setStatus(State.SUCCESS);
+                return l;
+            } catch (SQLException ex) {
+                this.status.setException(ex);
                 if (ChatBridge.isDebug()) {
-                    System.out.println("Guild status for " + guildId + ": null: " + ex.getMessage());
+                    System.out.println(this.status.getException().getMessage());
                 }
+                return SafetyLevel.SAFE;
+            }
+        }
+
+        return SafetyLevel.SAFE;
+    }
+    public Status setSafetyLevel(boolean isUser, @NotNull String id, @NotNull SafetyLevel safetyLevel) {
+        if (this.status.isConnected()) {
+            try {
+                Status status;
+                if (isUser) {
+                    if (this.getUser(id) == null) {
+                        return this.status.setFailed(new SQLException("User not found!"));
+                    }
+                    status = this.status.setStatus(State.UPDATED);
+                } else {
+                    if (this.getGuild(id) == null) {
+                        return this.status.setFailed(new SQLException("Guild not found!"));
+                    }
+                    status = this.status.setStatus(State.UPDATED);
+                }
+
+                PreparedStatement stmt = this.conn.prepareStatement("UPDATE chatbridge_" + (isUser ? "userstore" : "guildstore") + " SET safety=? WHERE id=?");
+                stmt.setString(1, safetyLevel.getId());
+                stmt.setString(2, id);
+                stmt.executeUpdate();
+
+                return status;
+            } catch (SQLException ex) {
+                ex.printStackTrace();
+                return this.status.setFailed(ex);
+            }
+        }
+
+        return this.status.setFailed(new SQLException("The connection couldn't be established!"));
+    }
+
+    @Nullable
+    public Boolean getGuildStatus(@NotNull String guildId) {
+        if (this.status.isConnected()) {
+            try {
+                ResultSet rs = this.getGuild(guildId);
+
+                Boolean s = null;
+                if (rs != null) {
+                    s = rs.getBoolean("status");
+                }
+
+                this.status.setStatus(State.SUCCESS);
+                return s;
+            } catch (SQLException ex) {
+                this.status.setException(ex);
                 return null;
             }
         }
 
         return null;
     }
-
     public Status setGuildStatus(@NotNull String guildId, boolean guildStatus) {
         if (this.status.isConnected()) {
             try {
-                Status status = this.status.setStatus(getGuildStatus(guildId) != null ? State.UPDATED : State.INSERTED);
+                Status status = this.status.setStatus(getGuild(guildId) != null ? State.UPDATED : State.INSERTED);
 
-                PreparedStatement stmt = this.conn.prepareStatement("INSERT INTO chatbridge_guildstore (guild_id, status) values (?, ?) ON DUPLICATE KEY UPDATE status=?");
+                PreparedStatement stmt = this.conn.prepareStatement("INSERT INTO chatbridge_guildstore (id, status) values (?, ?) ON DUPLICATE KEY UPDATE status=?");
                 stmt.setString(1, guildId);
                 stmt.setBoolean(2, guildStatus);
                 stmt.setBoolean(3, guildStatus);
@@ -389,9 +431,6 @@ public class MySQL {
             }
         }
 
-        if (ChatBridge.isDev()) {
-            return this.status.setStatus(State.SUCCESS);
-        }
         return this.status.setFailed(new SQLException("MySQL is not connected!"));
     }
 
