@@ -4,6 +4,9 @@ import com.ethanrobins.chatbridge_v2.*;
 import com.ethanrobins.chatbridge_v2.drivers.*;
 import com.ethanrobins.chatbridge_v2.exceptions.EndUserError;
 import com.ethanrobins.chatbridge_v2.utils.Messages;
+import lombok.Getter;
+import lombok.Setter;
+import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.EmbedType;
 import net.dv8tion.jda.api.entities.Member;
@@ -13,15 +16,12 @@ import net.dv8tion.jda.api.events.interaction.command.MessageContextInteractionE
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import net.dv8tion.jda.api.interactions.DiscordLocale;
-import net.dv8tion.jda.api.utils.messages.MessageCreateBuilder;
-import net.dv8tion.jda.api.utils.messages.MessageEditData;
+import net.dv8tion.jda.api.interactions.InteractionHook;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
@@ -69,11 +69,56 @@ public class MessageInteraction extends ListenerAdapter {
 
 
         switch (e.getName()) {
+            case "report":
+                e.deferReply().setEphemeral(true).queue();
+
+                if (e.getTarget().getAuthor().isBot() && e.getTarget().getAuthor().getId().equals(ChatBridge.getSecret().get("discord", "userId"))) {
+                    e.getHook().editOriginal("This function has not been implemented yet!").queue();
+                } else {
+                    String msg = switch (e.getUserLocale()) {
+                        case DiscordLocale.BULGARIAN -> "Това съобщение не може да бъде докладвано — не е изпратено от ChatBridge. Изберете отговор от ChatBridge и опитайте отново.";
+                        case DiscordLocale.CHINESE_CHINA -> "无法举报此消息 — 它不是由 ChatBridge 发送的。请选择一条 ChatBridge 的回复，然后重试。";
+                        case DiscordLocale.CHINESE_TAIWAN -> "無法檢舉此訊息 — 這不是由 ChatBridge 發送的。請選擇一則 ChatBridge 的回覆，然後再試一次。";
+                        case DiscordLocale.CROATIAN -> "Ne možete prijaviti ovu poruku — nije je poslao ChatBridge. Odaberite odgovor ChatBridgea i pokušajte ponovno.";
+                        case DiscordLocale.CZECH -> "Tuto zprávu nelze nahlásit — neposlal ji ChatBridge. Vyberte odpověď od ChatBridgeu a zkuste to znovu.";
+                        case DiscordLocale.DANISH -> "Du kan ikke anmelde denne besked — den er ikke sendt af ChatBridge. Vælg et svar fra ChatBridge, og prøv igen.";
+                        case DiscordLocale.DUTCH -> "Je kunt dit bericht niet melden — het is niet door ChatBridge verzonden. Selecteer een ChatBridge-reactie en probeer het opnieuw.";
+//                        case DiscordLocale.ENGLISH_UK -> "Can’t report this message — it wasn’t sent by ChatBridge. Select a ChatBridge reply and try again.";
+//                        case DiscordLocale.ENGLISH_US -> "Can’t report this message — it wasn’t sent by ChatBridge. Select a ChatBridge reply and try again.";
+                        case DiscordLocale.FINNISH -> "Tätä viestiä ei voi ilmoittaa — ChatBridge ei lähettänyt sitä. Valitse ChatBridge-vastaus ja yritä uudelleen.";
+                        case DiscordLocale.FRENCH -> "Impossible de signaler ce message — il n’a pas été envoyé par ChatBridge. Sélectionnez une réponse de ChatBridge et réessayez.";
+                        case DiscordLocale.GERMAN -> "Diese Nachricht kann nicht gemeldet werden — sie wurde nicht von ChatBridge gesendet. Wähle eine ChatBridge-Antwort und versuche es erneut.";
+                        case DiscordLocale.GREEK -> "Δεν γίνεται να αναφέρεις αυτό το μήνυμα — δεν στάλθηκε από το ChatBridge. Επίλεξε μια απάντηση του ChatBridge και δοκίμασε ξανά.";
+                        case DiscordLocale.HINDI -> "इस संदेश की रिपोर्ट नहीं की जा सकती — यह ChatBridge द्वारा नहीं भेजा गया था। कृपया ChatBridge का कोई जवाब चुनें और फिर से प्रयास करें.";
+                        case DiscordLocale.HUNGARIAN -> "Ezt az üzenetet nem lehet jelenteni — nem a ChatBridge küldte. Válassz egy ChatBridge-választ, és próbáld újra.";
+                        case DiscordLocale.INDONESIAN -> "Tidak dapat melaporkan pesan ini — pesan ini tidak dikirim oleh ChatBridge. Pilih balasan dari ChatBridge lalu coba lagi.";
+                        case DiscordLocale.ITALIAN -> "Impossibile segnalare questo messaggio — non è stato inviato da ChatBridge. Seleziona una risposta di ChatBridge e riprova.";
+                        case DiscordLocale.JAPANESE -> "このメッセージは報告できません — ChatBridge から送信されたものではありません。ChatBridge の返信を選んで、もう一度お試しください。";
+                        case DiscordLocale.KOREAN -> "이 메시지는 신고할 수 없습니다 — ChatBridge에서 보낸 것이 아닙니다. ChatBridge의 답장을 선택하고 다시 시도하세요.";
+                        case DiscordLocale.LITHUANIAN -> "Negalite pranešti apie šią žinutę — ją neišsiuntė „ChatBridge“. Pasirinkite „ChatBridge“ atsakymą ir bandykite dar kartą.";
+                        case DiscordLocale.NORWEGIAN -> "Du kan ikke rapportere denne meldingen — den ble ikke sendt av ChatBridge. Velg et ChatBridge-svar og prøv igjen.";
+                        case DiscordLocale.POLISH -> "Nie można zgłosić tej wiadomości — nie została wysłana przez ChatBridge. Wybierz odpowiedź od ChatBridge i spróbuj ponownie.";
+                        case DiscordLocale.PORTUGUESE_BRAZILIAN -> "Não é possível denunciar esta mensagem — ela não foi enviada pelo ChatBridge. Selecione uma resposta do ChatBridge e tente novamente.";
+                        case DiscordLocale.ROMANIAN_ROMANIA -> "Nu poți raporta acest mesaj — nu a fost trimis de ChatBridge. Selectează un răspuns de la ChatBridge și încearcă din nou.";
+                        case DiscordLocale.RUSSIAN -> "Вы не можете пожаловаться на это сообщение — его не отправлял ChatBridge. Выберите ответ от ChatBridge и попробуйте ещё раз.";
+                        case DiscordLocale.SPANISH -> "No puedes denunciar este mensaje — no fue enviado por ChatBridge. Selecciona una respuesta de ChatBridge y vuelve a intentarlo.";
+                        case DiscordLocale.SPANISH_LATAM -> "No puedes reportar este mensaje — no fue enviado por ChatBridge. Selecciona una respuesta de ChatBridge y vuelve a intentarlo.";
+                        case DiscordLocale.SWEDISH -> "Du kan inte anmäla det här meddelandet — det skickades inte av ChatBridge. Välj ett svar från ChatBridge och försök igen.";
+                        case DiscordLocale.THAI -> "ไม่สามารถรายงานข้อความนี้ได้ — ข้อความนี้ไม่ได้ส่งโดย ChatBridge โปรดเลือกการตอบกลับของ ChatBridge แล้วลองอีกครั้ง";
+                        case DiscordLocale.TURKISH -> "Bu mesaj bildirilemez — ChatBridge tarafından gönderilmedi. Bir ChatBridge yanıtı seçip tekrar deneyin.";
+                        case DiscordLocale.UKRAINIAN -> "Не можна поскаржитися на це повідомлення — його не надсилав ChatBridge. Виберіть відповідь від ChatBridge і спробуйте ще раз.";
+                        case DiscordLocale.VIETNAMESE -> "Không thể báo cáo tin nhắn này — tin nhắn không do ChatBridge gửi. Hãy chọn một phản hồi của ChatBridge rồi thử lại.";
+                        default -> "Can’t report this message — it wasn’t sent by ChatBridge. Select a ChatBridge reply and try again.";
+                    };
+
+                    e.getHook().editOriginal(msg).queue();
+                }
+                break;
             case "priv-translate-dev":
             case "pub-translate-dev":
             case "priv-translate":
             case "pub-translate":
-                boolean isPublic = e.getName().equals("Public Translation") || e.getName().equals("Public Translation (dev)");
+                boolean isPublic = e.getName().equals("pub-translate") || e.getName().equals("pub-translate-dev");
                 Member member = e.getMember();
                 if (member != null && isPublic && e.getGuild() != null && !e.getMember().hasPermission(e.getGuildChannel(), Permission.MESSAGE_SEND)) {
                     isPublic = false;
@@ -81,7 +126,7 @@ public class MessageInteraction extends ListenerAdapter {
 
                 e.deferReply().setEphemeral(!isPublic).queue();
 
-                translateMessageAsync(e, isPublic);
+                translateMessageAsync(e);
 
                 break;
             default:
@@ -126,68 +171,75 @@ public class MessageInteraction extends ListenerAdapter {
         }
     }
 
-    public void translateMessageAsync(@NotNull MessageContextInteractionEvent event, boolean isPublic) {
-        final String targetLocale = event.getUserLocale().getLocale();
-
+    public void translateMessageAsync(@NotNull MessageContextInteractionEvent event) {
         CompletableFuture.runAsync(() -> {
             try {
                 List<MessageEmbed> embeds = new ArrayList<>(event.getTarget().getEmbeds());
                 embeds.removeIf(embed -> embed.getType() != EmbedType.RICH);
 
                 if (embeds.isEmpty()) {
-                    Request request = new Request(new Request.Prompt(null, null, event.getUserLocale().getLocale(), event.getTarget().getContentRaw()));
+                    final ReplyGroup rg = new ReplyGroup(event);
+
+                    Request request = new Request(new Request.Prompt(PromptType.MESSAGE.getId(), PromptType.MESSAGE.getVersion(), event.getUserLocale().getLocale(), event.getTarget().getContentRaw()));
                     request.queue().thenAccept(response -> {
-                        Response.Data responseData = response.getOutput().getContent().getData();
-                        String reply = event.getTarget().getJumpUrl() + ": **(" + responseData.getSource().getTag() + ") " + responseData.getSource().getLang() + " → (" + responseData.getTarget().getTag() + ") " + responseData.getTarget().getLang() + "**\n" +
-                                responseData.getTarget().getSafe();
-                        event.getHook().editOriginal(reply).queue();
+                        Response.Data responseData = Objects.requireNonNull(Objects.requireNonNull(response.getOutput()).getContent()).getData();
+
+                        if (responseData.getTarget() instanceof Response.Data.MessageTarget tgt) {
+                            Response.Data.Source src = responseData.getSource();
+                            rg.setMessage(getCaption(event.getTarget().getJumpUrl(), src, tgt, tgt.getExplicit()));
+                        } else {
+                            System.err.println("Unexpected target type: " + responseData.getTarget().getClass().getName());
+                        }
                     }).exceptionally(ex -> {
                         ex.printStackTrace();
                         EndUserError err = buildEndUserError((Exception) ex);
                         event.getHook().setEphemeral(true).editOriginal(err.getLocaleMessages().get(event.getUserLocale())).queue();
                         return null;
                     });
-//                    Payload payload = new Payload(null, TranslateType.DECORATED.getSystemPrompt(), Payload.userMessage(targetLocale, event.getTarget().getContentRaw()), 5000);
-//                    payload.translateAsync().thenAccept(result -> {
-//                        String reply = event.getTarget().getJumpUrl() + ": " + result;
-//                        event.getHook().editOriginal(reply).queue();
-//                    }).exceptionally(ex -> {
-//                        ex.printStackTrace();
-//                        EndUserError err = buildEndUserError((Exception) ex);
-//                        event.getHook().setEphemeral(true).editOriginal(err.getLocaleMessages().get(event.getUserLocale())).queue();
-//                        return null;
-//                    });
                 } else {
-                    event.getHook().setEphemeral(true).editOriginal("Embeds are not supported at this time.").queue();
-//                    CompletableFuture<String> mainMessageFuture = CompletableFuture.completedFuture(null);
-//                    event.getTarget().getContentRaw();
-//                    if (event.getTarget().getContentRaw() != null && !event.getTarget().getContentRaw().isEmpty()) {
-//                        Payload mainMessagePayload = new Payload(null, TranslateType.DECORATED.getSystemPrompt(), Payload.userMessage(targetLocale, event.getTarget().getContentRaw()), 5000);
-//                        mainMessageFuture = mainMessagePayload.translateAsync();
-//                    } else {
-//                        Payload mainMessagePayload = new Payload(null, TranslateType.CAPTION.getSystemPrompt(), Payload.userMessage(targetLocale, event.getTarget().getContentRaw()), 5000);
-//                        mainMessageFuture = mainMessagePayload.translateAsync();
-//                    }
-//
-//                    List<CompletableFuture<TranslateEmbedBuilder>> embedFutures = new ArrayList<>();
-//                    for (MessageEmbed e : embeds) {
-//                        embedFutures.add(new TranslateEmbedBuilder(e).translateAsync(targetLocale));
-//                    }
-//
-//                    mainMessageFuture.thenCombine(
-//                            CompletableFuture.allOf(embedFutures.toArray(new CompletableFuture[0]))
-//                                    .thenApply(v -> embedFutures.stream()
-//                                            .map(CompletableFuture::join)
-//                                            .map(TranslateEmbedBuilder::build)
-//                                            .toList()),
-//                            (mainMessage, builtEmbeds) -> MessageEditData.fromCreateData(new MessageCreateBuilder().setContent(mainMessage).setEmbeds(builtEmbeds).build())
-//                    ).thenAccept(finalMessage -> event.getHook().editOriginal(finalMessage).queue())
-//                            .exceptionally(ex -> {
-//                        ex.printStackTrace();
-//                        EndUserError err = buildEndUserError((Exception) ex);
-//                        event.getHook().setEphemeral(true).editOriginal(err.getLocaleMessages().get(event.getUserLocale())).queue();
-//                        return null;
-//                    });
+                    final ReplyGroup rg = new ReplyGroup(event, embeds.size());
+                    boolean isFirst = true;
+                    for (MessageEmbed origEmbed : embeds) {
+                        Request request = new Request(new Request.Prompt(PromptType.EMBED.getId(), PromptType.EMBED.getVersion(), event.getUserLocale().getLocale(), isFirst ? event.getTarget().getContentRaw() : null, origEmbed.getTitle(), origEmbed.getAuthor(), origEmbed.getDescription(), origEmbed.getFooter(), origEmbed.getFields()));
+                        isFirst = false;
+                        request.queue().thenAccept(response -> {
+                            EmbedBuilder e = new EmbedBuilder();
+                            e.copyFrom(origEmbed);
+                            Response.Data responseData = Objects.requireNonNull(Objects.requireNonNull(response.getOutput()).getContent()).getData();
+                            if (responseData.getTarget() instanceof Response.Data.EmbedTarget tgt) {
+                                Response.Data.Source src = responseData.getSource();
+                                e.setTitle(tgt.getExplicit().getTitle());
+                                e.setAuthor(tgt.getExplicit().getAuthor(), origEmbed.getAuthor() != null ? origEmbed.getAuthor().getUrl() : null, origEmbed.getAuthor() != null ? origEmbed.getAuthor().getIconUrl() : null);
+                                e.setDescription(tgt.getExplicit().getDescription());
+                                e.setFooter(tgt.getExplicit().getFooter(), origEmbed.getFooter() != null ? origEmbed.getFooter().getIconUrl() : null);
+                                e.clearFields();
+                                if (tgt.getExplicit().getFields() != null && !tgt.getExplicit().getFields().isEmpty()) {
+                                    for (int i = 0; i < tgt.getExplicit().getFields().size(); i++) {
+                                        Response.Data.EmbedContent.Field f = tgt.getExplicit().getFields().get(i);
+                                        if (f == null) continue;
+                                        String name = f.getName();
+                                        if (name == null) name = "";
+                                        String value = f.getValue();
+                                        if (value == null) value = "";
+
+                                        e.addField(name, value, origEmbed.getFields().get(i).isInline());
+                                    }
+                                }
+
+                                if (tgt.getExplicit().getMessage() != null) {
+                                    rg.setMessage(getCaption(event.getTarget().getJumpUrl(), src, tgt, tgt.getExplicit().getMessage()));
+                                }
+                                rg.addEmbed(e.build());
+                            } else {
+                                System.err.println("Unexpected target type: " + responseData.getTarget().getClass().getName());
+                            }
+                        }).exceptionally(ex -> {
+                            ex.printStackTrace();
+                            EndUserError err = buildEndUserError((Exception) ex);
+                            event.getHook().setEphemeral(true).editOriginal(err.getLocaleMessages().get(event.getUserLocale())).queue();
+                            return null;
+                        });
+                    }
                 }
             } catch (Exception ex) {
                 ex.printStackTrace();
@@ -235,5 +287,63 @@ public class MessageInteraction extends ListenerAdapter {
         localeMessages.put(DiscordLocale.VIETNAMESE, "Không thể dịch tin nhắn. Vui lòng báo cáo sự cố này cho Máy chủ Discord chính thức của ChatBridge: " + discordInvite);
 
         return new EndUserError(ex, localeMessages);
+    }
+
+    public static String getCaption(String jumpUrl, Response.Data.Source src, Response.Data.Target<?> tgt, String msg) {
+        return "%jumpUrl%: **(%srcTag%) %srcLang% → (%tgtTag%) %tgtLang%**\n%message%"
+                .replace("%jumpUrl%", jumpUrl)
+                .replace("%srcTag%", src.getTag())
+                .replace("%srcLang%", src.getLang())
+                .replace("%tgtTag%", tgt.getTag())
+                .replace("%tgtLang%", tgt.getLang())
+                .replace("%message%", msg);
+    }
+
+    @Getter
+    public static class ReplyGroup {
+        private @NotNull final MessageContextInteractionEvent event;
+        private @Nullable String message = null;
+        private final @NotNull List<MessageEmbed> embeds = new ArrayList<>();
+
+        private final boolean messageOnly;
+        private final int waitCount;
+        private int finishCount = 0;
+
+        public ReplyGroup(@NotNull MessageContextInteractionEvent event, int waitCount) {
+            this.event = event;
+            this.messageOnly = false;
+            if (waitCount > 0) {
+                this.waitCount = waitCount;
+            } else {
+                throw new IllegalArgumentException("waitCount must be greater than 0");
+            }
+        }
+        public ReplyGroup(@NotNull MessageContextInteractionEvent event) {
+            this.event = event;
+            this.messageOnly = true;
+            this.waitCount = 0;
+        }
+
+        public void setMessage(String message) {
+            this.message = message;
+            if (this.messageOnly) {
+                complete();
+            }
+        }
+
+        public void addEmbed(MessageEmbed embed) {
+            this.embeds.add(embed);
+
+            finishCount++;
+            if (this.waitCount != 0 && finishCount >= waitCount) {
+                complete();
+            }
+        }
+
+        public void complete() {
+            InteractionHook hook = this.event.getHook();
+            if (this.message != null) hook.editOriginal(this.message).queue();
+            if (!this.embeds.isEmpty()) hook.editOriginalEmbeds(this.embeds).queue();
+        }
     }
 }

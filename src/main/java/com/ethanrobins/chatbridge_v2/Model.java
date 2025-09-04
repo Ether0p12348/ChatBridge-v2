@@ -7,11 +7,11 @@ import org.jetbrains.annotations.NotNull;
 /**
  * Enum representing ChatBridge AI Models.
  * <br><br><b>Models:</b>
- * <br>{@link Model#CHATBRIDGE_14}
+ * <br>{@link Model#CHATBRIDGE_15}
  * @see TranslateType
  */
 public enum Model {
-    CHATBRIDGE_14("ft:gpt-4.1-mini-2025-04-14:avidzenith:chatbridge-14-1:C9SjcnO5", TranslateType.BUNDLE_V1);
+    CHATBRIDGE_15("ft:gpt-4.1-mini-2025-04-14:avidzenith:chatbridge-15-1:CAoAHvVC", TranslateType.MESSAGE_V1, TranslateType.EMBED_V1);
 
     /**
      * The model's OpenAI Model Identifier
@@ -26,7 +26,7 @@ public enum Model {
     @Getter
     private final TranslateType[] allowedTypes;
 
-    Model(String id, TranslateType... allowedTypes) {
+    Model(@NotNull String id, TranslateType... allowedTypes) {
         this.id = id;
         this.allowedTypes = allowedTypes;
     }
@@ -36,7 +36,7 @@ public enum Model {
      * @return Default {@link Model}
      */
     public static Model getDefault() {
-        return CHATBRIDGE_14;
+        return CHATBRIDGE_15;
     }
 
     @Override

@@ -2,78 +2,69 @@ package com.ethanrobins.chatbridge_v2.drivers;
 
 import com.ethanrobins.chatbridge_v2.Model;
 import com.fasterxml.jackson.annotation.*;
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.*;
 import com.fasterxml.jackson.databind.*;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
 import lombok.Getter;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.io.IOException;
 import java.util.List;
 
 @Getter
+@JsonIgnoreProperties(ignoreUnknown = true)
 @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE, fieldVisibility = JsonAutoDetect.Visibility.NONE, isGetterVisibility = JsonAutoDetect.Visibility.NONE)
 @JsonSerialize(using = Response.NoSerialize.class)
 public class Response {
-    private static final ObjectMapper objectMapper = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+    private static final ObjectMapper objectMapper = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false).enable(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY);
 
-    private String id;
-    private String openaiId;
-    private long createdAt;
-    private @Nullable Boolean background;
-    private @Nullable OpenaiError error;
-    private @Nullable Model model;
-    private List<Output> output;
-    private Usage usage;
+    private String id = null;
+    private final @NotNull String openaiId;
+    private final long createdAt;
+    private final @Nullable Boolean background;
+    private final @Nullable OpenaiError error;
+    private final @Nullable Model model;
+    private final @NotNull List<Output> output;
+    private final @NotNull Usage usage;
 
-    public Response() {}
+    @JsonCreator
+    public Response(@JsonProperty("id") @NotNull String openaiId, @JsonProperty("created_at") long timestamp, @JsonProperty("background") @Nullable Boolean background, @JsonProperty("error") @Nullable OpenaiError error, @JsonProperty("model") @Nullable String modelStr, @JsonProperty("output") @NotNull List<Output> output, @JsonProperty("usage") @NotNull Usage usage) {
+        this.openaiId = openaiId;
+        this.createdAt = timestamp;
+        this.background = background;
+        this.error = error;
+        this.output = output;
+        this.usage = usage;
+
+        Model modelVal = null;
+        for (Model m : Model.values()) {
+            if (m.getId().equals(modelStr)) {
+                modelVal = m;
+                break;
+            }
+        }
+        this.model = modelVal;
+    }
 
     @JsonIgnore
     public void setId(@NotNull String id) {
+        if (this.id != null) {
+            System.err.println("Warning: Response#setId() called more than once. Ignoring call.");
+            return;
+        }
         this.id = id;
     }
+
     @JsonIgnore
     public @Nullable Output getOutput() {
-        return (this.output != null && !this.output.isEmpty()) ? this.output.getFirst() : null;
-    }
-
-    @JsonSetter("id")
-    public void setOpenaiId(@NotNull String openaiId) {
-        this.openaiId = openaiId;
-    }
-    @JsonSetter("created_at")
-    public void setCreatedAt(long timestamp) {
-        this.createdAt = timestamp;
-    }
-    @JsonSetter("background")
-    public void setBackground(@Nullable Boolean background) {
-        this.background = background;
-    }
-    @JsonSetter("error")
-    public void setError(@Nullable OpenaiError error) {
-        this.error = error;
-    }
-    @JsonSetter("model")
-    public void setModel(@NotNull String model) {
-        for (Model m : Model.values()) {
-            if (m.getId().equals(model)) {
-                this.model = m;
-                return;
-            }
-        }
-        this.model = null;
-    }
-    @JsonSetter("output")
-    public void setOutputList(@NotNull List<Output> outputs) {
-        this.output = outputs;
-    }
-    @JsonSetter("usage")
-    public void setUsage(@NotNull Usage usage) {
-        this.usage = usage;
+        return (!this.output.isEmpty()) ? this.output.getFirst() : null;
     }
 
     @Getter
+    @JsonIgnoreProperties(ignoreUnknown = true)
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE, fieldVisibility = JsonAutoDetect.Visibility.NONE, isGetterVisibility = JsonAutoDetect.Visibility.NONE)
     @JsonSerialize(using = Response.NoSerialize.class)
     public static class OpenaiError {
@@ -88,6 +79,7 @@ public class Response {
     }
 
     @Getter
+    @JsonIgnoreProperties(ignoreUnknown = true)
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE, fieldVisibility = JsonAutoDetect.Visibility.NONE, isGetterVisibility = JsonAutoDetect.Visibility.NONE)
     @JsonSerialize(using = Response.NoSerialize.class)
     public static class Output {
@@ -107,6 +99,7 @@ public class Response {
         }
 
         @Getter
+        @JsonIgnoreProperties(ignoreUnknown = true)
         @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE, fieldVisibility = JsonAutoDetect.Visibility.NONE, isGetterVisibility = JsonAutoDetect.Visibility.NONE)
         @JsonSerialize(using = Response.NoSerialize.class)
         public static class Content {
@@ -127,22 +120,31 @@ public class Response {
     }
 
     @Getter
+    @JsonIgnoreProperties(ignoreUnknown = true)
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE, fieldVisibility = JsonAutoDetect.Visibility.NONE, isGetterVisibility = JsonAutoDetect.Visibility.NONE)
     @JsonSerialize(using = Response.NoSerialize.class)
     public static class Data {
         private final @NotNull Source source;
-        private final @NotNull Target target;
+        private final @NotNull Target<?> target;
 
         @JsonCreator
-        public Data(@JsonProperty("src") @NotNull Source src, @JsonProperty("tgt") @NotNull Target tgt) {
+        public Data(@JsonProperty("src") @NotNull Source src, @JsonProperty("tgt") @NotNull @JsonDeserialize(using = Data.TargetDeserializer.class) Target<?> tgt) {
             this.source = src;
             this.target = tgt;
         }
 
+        public interface SourceFields {
+            @JsonIgnore
+            String getTag();
+            @JsonIgnore
+            String getLang();
+        }
+
         @Getter
+        @JsonIgnoreProperties(ignoreUnknown = true)
         @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE, fieldVisibility = JsonAutoDetect.Visibility.NONE, isGetterVisibility = JsonAutoDetect.Visibility.NONE)
         @JsonSerialize(using = Response.NoSerialize.class)
-        public static class Source {
+        public static class Source implements SourceFields {
             protected final @NotNull String tag;
             protected final @NotNull String lang;
 
@@ -153,23 +155,122 @@ public class Response {
             }
         }
 
+        @JsonIgnoreProperties(ignoreUnknown = true)
+        @JsonSerialize(using = Response.NoSerialize.class)
+        public interface Target<T> extends SourceFields  {
+            @JsonIgnore
+            T getExplicit();
+            @JsonIgnore
+            T getSafe();
+        }
+
         @Getter
+        @JsonIgnoreProperties(ignoreUnknown = true)
         @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE, fieldVisibility = JsonAutoDetect.Visibility.NONE, isGetterVisibility = JsonAutoDetect.Visibility.NONE)
         @JsonSerialize(using = Response.NoSerialize.class)
-        public static class Target extends Source {
+        public static class MessageTarget extends Source implements Target<String> {
             private final @NotNull String explicit;
             private final @NotNull String safe;
 
             @JsonCreator
-            public Target(@JsonProperty("tag") @NotNull String tag, @JsonProperty("lang") @NotNull String lang, @JsonProperty("e") @NotNull String explicit, @JsonProperty("s") @NotNull String safe) {
+            public MessageTarget(@JsonProperty("tag") @NotNull String tag, @JsonProperty("lang") @NotNull String lang, @JsonProperty("e") @NotNull String explicit, @JsonProperty("s") @NotNull String safe) {
                 super(tag, lang);
                 this.explicit = explicit;
                 this.safe = safe;
             }
         }
+
+        @Getter
+        @JsonIgnoreProperties(ignoreUnknown = true)
+        @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE, fieldVisibility = JsonAutoDetect.Visibility.NONE, isGetterVisibility = JsonAutoDetect.Visibility.NONE)
+        @JsonSerialize(using = Response.NoSerialize.class)
+        public static class EmbedTarget extends Source implements Target<EmbedContent> {
+            private final @NotNull EmbedContent explicit;
+            private final @NotNull EmbedContent safe;
+
+            @JsonCreator
+            public EmbedTarget(@JsonProperty("tag") @NotNull String tag, @JsonProperty("lang") @NotNull String lang, @JsonProperty("e") @NotNull EmbedContent explicit, @JsonProperty("s") @NotNull EmbedContent safe) {
+                super(tag, lang);
+                this.explicit = explicit;
+                this.safe = safe;
+            }
+        }
+
+        @Getter
+        @JsonIgnoreProperties(ignoreUnknown = true)
+        @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE, fieldVisibility = JsonAutoDetect.Visibility.NONE, isGetterVisibility = JsonAutoDetect.Visibility.NONE)
+        @JsonSerialize(using = Response.NoSerialize.class)
+        public static class EmbedContent {
+            private final @Nullable String message;
+            private final @Nullable String title;
+            private final @Nullable String author;
+            private final @Nullable String description;
+            private final @Nullable String footer;
+            private final @Nullable List<Field> fields;
+
+            @JsonCreator
+            public EmbedContent(@JsonProperty("msg") @Nullable String message, @JsonProperty("title") @Nullable String title, @JsonProperty("author") @Nullable String author, @JsonProperty("desc") @Nullable String description, @JsonProperty("footer") @Nullable String footer, @JsonProperty("fields") @Nullable List<Field> fields) {
+                this.message = (message == null || message.isEmpty()) ? null : message;
+                this.title = (title == null || title.isEmpty()) ? null : title;
+                this.author = (author == null || author.isEmpty()) ? null : author;
+                this.description = (description == null || description.isEmpty()) ? null : description;
+                this.footer = (footer == null || footer.isEmpty()) ? null : footer;
+                this.fields = (fields == null || fields.isEmpty()) ? null : fields;
+            }
+
+            @Getter
+            @JsonIgnoreProperties(ignoreUnknown = true)
+            @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE, fieldVisibility = JsonAutoDetect.Visibility.NONE, isGetterVisibility = JsonAutoDetect.Visibility.NONE)
+            @JsonSerialize(using = Response.NoSerialize.class)
+            public static class Field {
+                private final @Nullable String name;
+                private final @Nullable String value;
+
+                @JsonCreator
+                public Field(@JsonProperty("name") @Nullable String name, @JsonProperty("value") @Nullable String value) {
+                    this.name = (name == null || name.isEmpty()) ? "" : name;
+                    this.value = (value == null || value.isEmpty()) ? "" : value;
+                }
+            }
+        }
+
+        public static class TargetDeserializer extends StdDeserializer<Target> {
+            public TargetDeserializer() {
+                super(Target.class);
+            }
+
+            @Override
+            public Target deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
+                final ObjectMapper mapper = (ObjectMapper) p.getCodec();
+                final JsonNode node = mapper.readTree(p);
+
+                JsonNode e = node.get("e");
+                JsonNode s = node.get("s");
+
+                if (e == null || s == null) {
+                    ctxt.reportInputMismatch(Target.class, "Both 'e' and 's' must be present on 'tgt'. Found e=%s, s=%s", typeOf(e), typeOf(s));
+                }
+
+                boolean bothText = e.isTextual() && s.isTextual();
+                boolean bothObj  = e.isObject()  && s.isObject();
+
+                if (bothText)  return mapper.treeToValue(node, MessageTarget.class);
+                if (bothObj)   return mapper.treeToValue(node, EmbedTarget.class);
+
+                ctxt.reportInputMismatch(Target.class,
+                        "'e' and 's' must be the same kind (both strings for MessageTarget, or both objects for EmbedTarget). Found e=%s, s=%s",
+                        typeOf(e), typeOf(s));
+                return null;
+            }
+
+            private static String typeOf(JsonNode node) {
+                return (node == null) ? "null" : node.getNodeType().toString().toLowerCase();
+            }
+        }
     }
 
     @Getter
+    @JsonIgnoreProperties(ignoreUnknown = true)
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE, fieldVisibility = JsonAutoDetect.Visibility.NONE, isGetterVisibility = JsonAutoDetect.Visibility.NONE)
     @JsonSerialize(using = Response.NoSerialize.class)
     public static class Usage {

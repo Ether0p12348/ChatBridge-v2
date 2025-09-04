@@ -10,6 +10,7 @@ import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.*;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import net.dv8tion.jda.api.entities.MessageEmbed;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -20,6 +21,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
@@ -85,6 +87,7 @@ public class Request {
         return this.prompt;
     }
 
+    @JsonIgnore
     public CompletableFuture<Response> queue() {
         final String API_URL = ChatBridge.getSecret().get("chatgpt", "url");
         final String API_KEY = ChatBridge.getSecret().get("chatgpt", "key");
@@ -116,6 +119,7 @@ public class Request {
                 Response data;
                 try {
                     data = objectMapper.readValue(responseStr, Response.class);
+                    if (data != null) data.setId(this.getId());
                 } catch (JsonProcessingException ex) {
                     System.err.println("Unable to parse data: " + ex.getMessage() + "\n\nData: " + responseStr);
                     data = null;
@@ -123,7 +127,6 @@ public class Request {
                 this.response = data;
                 return data;
             } catch (URISyntaxException | IOException | InterruptedException | HttpErrorCode e) {
-
                 e.printStackTrace();
                 return null;
             }
@@ -136,14 +139,44 @@ public class Request {
     @JsonDeserialize(using = Request.NoDeserialize.class)
     public static class Prompt {
         private final @NotNull String id;
-        private final @Nullable Integer version;
+        private final @Nullable String version;
         private final @NotNull Map<String, String> variables = new HashMap<>();
 
-        public Prompt(@Nullable String id, @Nullable Integer version, @NotNull String target, @NotNull String message) {
+        public Prompt(@Nullable String id, @Nullable String version, @NotNull String target, @NotNull String message) {
             this.id = id != null ? id : PromptType.MESSAGE.getId();
             this.version = version;
             this.variables.put("tgt", target);
             this.variables.put("msg", message);
+        }
+        public Prompt(@Nullable String id, @Nullable String version, @NotNull String target, @Nullable String message, @Nullable String title, @Nullable String author, @Nullable String description, @Nullable String footer, @Nullable Map<String, String> fields) {
+            this.id = id != null ? id : PromptType.EMBED.getId();
+            this.version = version;
+            this.variables.put("tgt", target);
+            this.variables.put("msg", message != null ? message : "");
+            this.variables.put("title", title != null ? title : "");
+            this.variables.put("author", author != null ? author : "");
+            this.variables.put("desc", description != null ? description : "");
+            this.variables.put("footer", footer != null ? footer : "");
+            try {
+                this.variables.put("fields", objectMapper.writeValueAsString(fields));
+            } catch (JsonProcessingException e) {
+                System.err.println("Unable to parse fields: " + e.getMessage());
+                this.variables.put("fields", null);
+            }
+        }
+        public Prompt(@Nullable String id, @Nullable String version, @NotNull String target, @Nullable String message, @Nullable String title, @Nullable MessageEmbed.AuthorInfo author, @Nullable String description, @Nullable MessageEmbed.Footer footer, @Nullable List<MessageEmbed.Field> fields) {
+            this(id, version, target, message, title, author != null ? author.getName() : null, description, footer != null ? footer.getText() : null, getFieldsFromEmbedFields(fields));
+        }
+        private static Map<String, String> getFieldsFromEmbedFields(@Nullable List<MessageEmbed.Field> fields) {
+            if (fields != null) {
+                Map<String, String> fieldMap = new HashMap<>();
+                for (MessageEmbed.Field f : fields) {
+                    fieldMap.put(f.getName(), f.getValue());
+                }
+                if (fields.isEmpty()) fieldMap = null;
+                return fieldMap;
+            }
+            return null;
         }
 
         @JsonGetter("id")
@@ -151,7 +184,7 @@ public class Request {
             return this.id;
         }
         @JsonGetter("version")
-        public @Nullable Integer getVersion() {
+        public @Nullable String getVersion() {
             return this.version;
         }
         @JsonGetter("variables")

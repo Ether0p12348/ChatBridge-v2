@@ -9,7 +9,8 @@ import lombok.Getter;
  */
 @Getter
 public enum TranslateType {
-    BUNDLE_V1("CB_BUNDLE v1");
+    MESSAGE_V1("CB_MESSAGE v1"),
+    EMBED_V1("CB_EMBED v1");
 
     private final String systemPrompt;
 
