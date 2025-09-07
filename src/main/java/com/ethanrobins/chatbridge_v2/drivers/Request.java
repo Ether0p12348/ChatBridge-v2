@@ -115,7 +115,9 @@ public class Request {
                 Response data;
                 try {
                     data = objectMapper.readValue(responseStr, Response.class);
-                    if (data != null) data.setId(this.getId());
+                    if (data != null) {
+                        data.setId(this.getId());
+                    }
                 } catch (JsonProcessingException ex) {
                     System.err.println("Unable to parse data: " + ex.getMessage() + "\n\nData: " + responseStr);
                     data = null;

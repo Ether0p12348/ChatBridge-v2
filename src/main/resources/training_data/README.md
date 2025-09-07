@@ -1,5 +1,7 @@
 # Training Data
 
+TODO: fix training data. Currently the src.lang and tgt.lang are not in the target language but in English.
+
 ---
 
 ## Requests

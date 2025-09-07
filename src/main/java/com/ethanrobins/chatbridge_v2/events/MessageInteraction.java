@@ -4,6 +4,7 @@ import com.ethanrobins.chatbridge_v2.*;
 import com.ethanrobins.chatbridge_v2.drivers.*;
 import com.ethanrobins.chatbridge_v2.exceptions.EndUserError;
 import com.ethanrobins.chatbridge_v2.utils.Messages;
+import com.ethanrobins.chatbridge_v2.utils.RandomString;
 import lombok.Getter;
 import lombok.Setter;
 import net.dv8tion.jda.api.EmbedBuilder;
@@ -17,6 +18,8 @@ import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import net.dv8tion.jda.api.interactions.DiscordLocale;
 import net.dv8tion.jda.api.interactions.InteractionHook;
+import net.dv8tion.jda.api.interactions.components.ActionRow;
+import net.dv8tion.jda.api.interactions.components.buttons.Button;
 import net.dv8tion.jda.api.utils.messages.MessageEditBuilder;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -198,6 +201,7 @@ public class MessageInteraction extends ListenerAdapter {
                     final ReplyGroup rg = new ReplyGroup(event);
 
                     Request request = new Request(new Request.Prompt(PromptType.MESSAGE.getId(), PromptType.MESSAGE.getVersion(), event.getUserLocale().getLocale(), event.getTarget().getContentRaw()));
+                    rg.addRequest(request);
                     request.queue().thenAccept(response -> {
                         Response.Data responseData = Objects.requireNonNull(Objects.requireNonNull(response.getOutput()).getContent()).getData();
 
@@ -218,6 +222,7 @@ public class MessageInteraction extends ListenerAdapter {
                     boolean isFirst = true;
                     for (MessageEmbed origEmbed : embeds) {
                         Request request = new Request(new Request.Prompt(PromptType.EMBED.getId(), PromptType.EMBED.getVersion(), event.getUserLocale().getLocale(), isFirst ? event.getTarget().getContentRaw() : null, origEmbed.getTitle(), origEmbed.getAuthor(), origEmbed.getDescription(), origEmbed.getFooter(), origEmbed.getFields()));
+                        rg.addRequest(request);
                         isFirst = false;
                         request.queue().thenAccept(response -> {
                             EmbedBuilder e = new EmbedBuilder();
@@ -320,9 +325,11 @@ public class MessageInteraction extends ListenerAdapter {
 
     @Getter
     public static class ReplyGroup {
+        private final @NotNull String id = RandomString.generate(20, RandomString.Content.LOWERCASE, RandomString.Content.UPPERCASE, RandomString.Content.NUMBERS);
         private @NotNull final MessageContextInteractionEvent event;
         private @Nullable String message = null;
         private final @NotNull List<MessageEmbed> embeds = new ArrayList<>();
+        private final @NotNull List<Request> requestData = new ArrayList<>();
 
         private final boolean messageOnly;
         private final int waitCount;
@@ -342,12 +349,14 @@ public class MessageInteraction extends ListenerAdapter {
             this.messageOnly = true;
             this.waitCount = 0;
         }
-
         public void setMessage(String message) {
             this.message = message;
             if (this.messageOnly) {
                 complete();
             }
+        }
+        public void addRequest(@NotNull Request request) {
+            this.requestData.add(request);
         }
 
         public void addEmbed(MessageEmbed embed) {
@@ -362,10 +371,51 @@ public class MessageInteraction extends ListenerAdapter {
         public void complete() {
             InteractionHook hook = this.event.getHook();
 
-            MessageEditBuilder mb = new MessageEditBuilder();
+            String reportLink = "https://chatbridge.app/report?id=" + this.id;
+            Button report;
+            if (this.requestData.isEmpty() || this.requestData.getFirst().getPrompt().getVariables().isEmpty() || this.requestData.getFirst().getPrompt().getVariables().get("tgt") == null) {
+                report = Button.link(reportLink, "Report Translation");
+                System.out.println("[WARNING] The tgt variable was undefined for button translation.");
+            } else {
+                report = switch (DiscordLocale.from(this.requestData.getFirst().getPrompt().getVariables().get("tgt"))) {
+                    case DiscordLocale.BULGARIAN -> Button.link(reportLink, "Докладвай превод");
+                    case DiscordLocale.CHINESE_CHINA -> Button.link(reportLink, "报告翻译问题");
+                    case DiscordLocale.CHINESE_TAIWAN -> Button.link(reportLink, "回報翻譯問題");
+                    case DiscordLocale.CROATIAN -> Button.link(reportLink, "Prijavi prijevod");
+                    case DiscordLocale.CZECH -> Button.link(reportLink, "Nahlásit překlad");
+                    case DiscordLocale.DANISH -> Button.link(reportLink, "Rapportér oversættelse");
+                    case DiscordLocale.DUTCH -> Button.link(reportLink, "Vertaling melden");
+                    case DiscordLocale.FINNISH -> Button.link(reportLink, "Ilmoita käännösvirhe");
+                    case DiscordLocale.FRENCH -> Button.link(reportLink, "Signaler la traduction");
+                    case DiscordLocale.GERMAN -> Button.link(reportLink, "Übersetzung melden");
+                    case DiscordLocale.GREEK -> Button.link(reportLink, "Αναφορά μετάφρασης");
+                    case DiscordLocale.HINDI -> Button.link(reportLink, "अनुवाद की रिपोर्ट करें");
+                    case DiscordLocale.HUNGARIAN -> Button.link(reportLink, "Fordítás bejelentése");
+                    case DiscordLocale.INDONESIAN -> Button.link(reportLink, "Laporkan terjemahan");
+                    case DiscordLocale.ITALIAN -> Button.link(reportLink, "Segnala traduzione");
+                    case DiscordLocale.JAPANESE -> Button.link(reportLink, "翻訳を報告");
+                    case DiscordLocale.KOREAN -> Button.link(reportLink, "번역 신고");
+                    case DiscordLocale.LITHUANIAN -> Button.link(reportLink, "Pranešti apie vertimą");
+                    case DiscordLocale.NORWEGIAN -> Button.link(reportLink, "Rapporter oversettelse");
+                    case DiscordLocale.POLISH -> Button.link(reportLink, "Zgłoś tłumaczenie");
+                    case DiscordLocale.PORTUGUESE_BRAZILIAN -> Button.link(reportLink, "Reportar tradução");
+                    case DiscordLocale.ROMANIAN_ROMANIA -> Button.link(reportLink, "Raportează traducerea");
+                    case DiscordLocale.RUSSIAN -> Button.link(reportLink, "Пожаловаться на перевод");
+                    case DiscordLocale.SPANISH -> Button.link(reportLink, "Informar de la traducción");
+                    case DiscordLocale.SPANISH_LATAM -> Button.link(reportLink, "Reportar traducción");
+                    case DiscordLocale.SWEDISH -> Button.link(reportLink, "Rapportera översättning");
+                    case DiscordLocale.THAI -> Button.link(reportLink, "รายงานคำแปล");
+                    case DiscordLocale.TURKISH -> Button.link(reportLink, "Çeviriyi bildir");
+                    case DiscordLocale.UKRAINIAN -> Button.link(reportLink, "Поскаржитися на переклад");
+                    case DiscordLocale.VIETNAMESE -> Button.link(reportLink, "Báo cáo bản dịch");
+                    default -> Button.link(reportLink, "Report Translation");
+                };
+            }
 
+            MessageEditBuilder mb = new MessageEditBuilder();
             mb.setContent(this.message);
             mb.setEmbeds(this.embeds.size() > 10 ? this.embeds.subList(0, 10) : this.embeds);
+            mb.setComponents(ActionRow.of(report));
 
             if (this.message != null || !this.embeds.isEmpty()) hook.editOriginal(mb.build()).queue();
         }
